@@ -4,3 +4,5 @@ qlib_yaml = [
     "/examples/benchmarks/LightGBM/workflow_config_lightgbm_Alpha158.yaml",
     "/examples/benchmarks/LightGBM/workflow_config_lightgbm_Alpha360.yaml",
 ]
+
+out_path = "~/.qlibAssistant/"
