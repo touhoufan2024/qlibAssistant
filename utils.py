@@ -1,5 +1,6 @@
 import tomllib
 import os
+from datetime import datetime
 
 def get_config(filename="config.toml"):
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -13,6 +14,16 @@ def get_config(filename="config.toml"):
         raise Exception(f"TOML 配置文件解析失败: {e}")
     return config
 
+class ConfigLoader:
+    def __init__(self, filename="config.toml"):
+        self.config = get_config(filename)
+        self.output_folder =  os.path.expanduser(os.path.join(self.config["output_path"], datetime.now().strftime("%Y-%m-%d-%H")))
+        os.makedirs(self.output_folder, exist_ok=True)
+
+    def get_output_folder(self):
+        return self.output_folder
+
+
 if __name__ == "__main__":
-    config = get_config()
-    print(config)
+    cl = ConfigLoader()
+    print(cl.config)
