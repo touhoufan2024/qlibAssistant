@@ -5,6 +5,9 @@ from loguru import logger
 import requests
 import subprocess
 
+# 更新并解压A股数据, 数据来源于github release
+# TODO: 如果 数据不需要更新, 就不更新数据
+
 
 def get_latest_url(base_url):
     response = requests.get(base_url, allow_redirects=True)
