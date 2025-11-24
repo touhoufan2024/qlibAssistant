@@ -22,8 +22,25 @@ class ConfigLoader:
 
     def get_output_folder(self):
         return self.output_folder
+    
+    def get_yamls_list(self):
+        ret = []
+        for item in self.config.get("qlib_yamls", []):
+            ret.append(os.path.join(self.config["qlib_path"], item))
+        return ret
+
+    def get_yaml_name(self, yaml):
+        return os.path.basename(yaml).replace(".yaml", "")
+
+    def get_qrun_cmd_list(self):
+        ret = []
+        for item in self.get_yamls_list():
+            ret.append(f"qrun -e {self.get_yaml_name(item)}  -u {self.get_output_folder()} {item}")
+        return ret
 
 
 if __name__ == "__main__":
     cl = ConfigLoader()
-    print(cl.config)
+    print(cl.get_output_folder())
+    print(cl.get_yamls_list())
+    print(cl.get_qrun_cmd_list())
