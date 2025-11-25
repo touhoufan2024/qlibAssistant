@@ -1,6 +1,7 @@
 import tomllib
 import os
 from datetime import datetime
+from loguru import logger
 
 def get_config(filename="config.toml"):
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -18,10 +19,17 @@ class ConfigLoader:
     def __init__(self, filename="config.toml"):
         self.config = get_config(filename)
         self.output_folder =  os.path.expanduser(os.path.join(self.config["output_path"], datetime.now().strftime("%Y-%m-%d-%H")))
+        logger.info(f"mkdir: {self.output_folder}")
+        if os.path.isdir(self.output_folder):
+            logger.info(f"out folder is exist: {self.output_folder}")
+            self.output_folder_is_exist = True
         os.makedirs(self.output_folder, exist_ok=True)
 
     def get_output_folder(self):
         return self.output_folder
+
+    def output_folder_is_exists(self):
+        return self.output_folder_is_exist
     
     def get_yamls_list(self):
         ret = []

@@ -5,6 +5,7 @@ from loguru import logger
 import requests
 import subprocess
 import utils
+from utils import ConfigLoader
 
 # 创建本日的目录, 用于存放今日执行的结果 
 # 执行任务, 将 mlrun 路径放在 今日目录中, 将 pkl 等全部保存
@@ -24,6 +25,9 @@ class ExecuteYamls(Execute):
         self.config = config
 
     def runTask(self, cmd):
+        if self.config.output_folder_is_exists():
+            logger.info("Output folder already exists, skipping execution.")
+            return None
         logger.info(f"Executing command: {cmd}")
         try:
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)

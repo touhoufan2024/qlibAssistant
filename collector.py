@@ -35,9 +35,9 @@ class CollectorMlrunDir(Collector):
     def __init__(self, config):
         super().__init__(config)
         self.config = config
-        self.qlib_init("/home/ash/.qlibAssistant/2025-11-24-15/")
     
     def qlib_init(self, mlrun_dir = "../mlruns"):
+        logger.info(f"Initializing Qlib with mlrun dir: {mlrun_dir}")
         provider_uri = "~/.qlib/qlib_data/cn_data"  # target_dir
         exp_manager = C["exp_manager"]
         # exp_manager["kwargs"]["uri"] = "file:" + self.config.get_output_folder()
@@ -46,12 +46,14 @@ class CollectorMlrunDir(Collector):
 
     def print_all_exps(self):
         exps = R.list_experiments()
+        print(f"Found {len(exps)} experiments:")
 
         for a, b in exps.items():
             print(a)
             print(b)
 
     def analysis(self, mlrun_dir = "../mlruns"):
+        self.qlib_init(self.config.get_output_folder())
         self.print_all_exps()
 
 

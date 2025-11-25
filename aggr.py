@@ -23,6 +23,7 @@ class AggrTasks:
         logger.info("Starting aggregated tasks...")
         self.data_updater.update_data()
         self.exec.runTasks()
+        self.collector.analysis()
 
 
 if __name__ == "__main__":
