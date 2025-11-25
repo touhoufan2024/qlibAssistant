@@ -18,11 +18,11 @@ class AggrTasks:
         self.data_updater = data_updater
         self.exec = exec
         self.collector = collector
-        pass
 
     def run_aggr(self):
         logger.info("Starting aggregated tasks...")
-        data_updater.update_data()
+        self.data_updater.update_data()
+        self.exec.runTasks()
 
 
 if __name__ == "__main__":
@@ -32,4 +32,3 @@ if __name__ == "__main__":
     collector = CollectorMlrunDir(config)
     aggr_tasks = AggrTasks(config, executor, data_updater, collector)
     aggr_tasks.run_aggr()
-    pass
