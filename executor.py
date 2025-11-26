@@ -25,9 +25,6 @@ class ExecuteYamls(Execute):
         self.config = config
 
     def runTask(self, cmd):
-        if self.config.output_folder_is_exists():
-            logger.info("Output folder already exists, skipping execution.")
-            return None
         logger.info(f"Executing command: {cmd}")
         try:
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
@@ -51,6 +48,10 @@ class ExecuteYamls(Execute):
 
 
     def runTasks(self):
+        self.config.mkdir_output_folder()
+        if self.config.output_folder_is_exists():
+            logger.info("Output folder already exists, skipping execution.")
+            return None
         for cmd in self.config.get_qrun_cmd_list():
             self.runTask(cmd)
 

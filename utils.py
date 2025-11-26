@@ -19,6 +19,9 @@ class ConfigLoader:
     def __init__(self, filename="config.toml"):
         self.config = get_config(filename)
         self.output_folder =  os.path.expanduser(os.path.join(self.config["output_path"], datetime.now().strftime("%Y-%m-%d-%H")))
+        self.output_folder_is_exist = False
+
+    def mkdir_output_folder(self):
         logger.info(f"mkdir: {self.output_folder}")
         if os.path.isdir(self.output_folder):
             logger.info(f"out folder is exist: {self.output_folder}")
