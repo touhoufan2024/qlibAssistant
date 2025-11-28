@@ -39,22 +39,40 @@ class ExperimentInfo:
     id: str
     name: str
     recorders: List[str] = field(default_factory=list)
+    config: utils.ConfigLoader = utils.ConfigLoader()
 
     def set_recorder(self, recorder):
         self.recorder = recorder
 
     def load_pkl(self):
-        self.pred_df = self.recorder.load_object("pred.pkl")
-        self.ic_data = self.recorder.load_object("sig_analysis/ic.pkl")
-        self.ric_data = self.recorder.load_object("sig_analysis/ric.pkl")
-        self.indicators_normal_1day_obj = self.recorder.load_object("portfolio_analysis/indicators_normal_1day_obj.pkl")
-        self.report_normal_1day_df = self.recorder.load_object("portfolio_analysis/report_normal_1day.pkl")
-        self.positions_normal_1day = self.recorder.load_object("portfolio_analysis/positions_normal_1day.pkl")
-        self.indicators_normal_1day = self.recorder.load_object("portfolio_analysis/indicators_normal_1day.pkl") # 注意这个和上面的 _obj 区分开
-        self.port_analysis_1day_df = self.recorder.load_object("portfolio_analysis/port_analysis_1day.pkl")
-        self.indicator_analysis_1day_df = self.recorder.load_object("portfolio_analysis/indicator_analysis_1day.pkl")
-        self.label_df = self.recorder.load_object("label.pkl")
-        self.params_data = self.recorder.load_object("params.pkl")
+        self.loaded_objects = {}
+        self.loaded_objects['pred'] = self.recorder.load_object("pred.pkl")
+        self.loaded_objects['ic_data'] = self.recorder.load_object("sig_analysis/ic.pkl")
+        self.loaded_objects['ric_data'] = self.recorder.load_object("sig_analysis/ric.pkl")
+        self.loaded_objects['indicators_normal_1day_obj'] = self.recorder.load_object("portfolio_analysis/indicators_normal_1day_obj.pkl")
+        self.loaded_objects['report_normal_1day'] = self.recorder.load_object("portfolio_analysis/report_normal_1day.pkl")
+        self.loaded_objects['positions_normal_1day'] = self.recorder.load_object("portfolio_analysis/positions_normal_1day.pkl")
+        self.loaded_objects['indicators_normal_1day'] = self.recorder.load_object("portfolio_analysis/indicators_normal_1day.pkl")  # 注意这和上面的区分
+        self.loaded_objects['port_analysis_1day'] = self.recorder.load_object("portfolio_analysis/port_analysis_1day.pkl")
+        self.loaded_objects['indicator_analysis_1day'] = self.recorder.load_object("portfolio_analysis/indicator_analysis_1day.pkl")
+        self.loaded_objects['label'] = self.recorder.load_object("label.pkl")
+        self.loaded_objects['params'] = self.recorder.load_object("params.pkl")
+
+    def pkls_to_csv(self):
+        output_dir= os.path.join(self.config.get_output_folder(),"myanalysis", self.name, self.recorder.experiment_id, self.recorder.id)
+        logger.info(f"Saving loaded PKL objects to CSV in directory: {output_dir}")
+        os.makedirs(output_dir, exist_ok=True)
+        for key, df in self.loaded_objects.items():
+            if isinstance(df, pd.DataFrame):
+                csv_path = os.path.join(output_dir, f"{key}.csv")
+                df.to_csv(csv_path)
+                logger.info(f"Saved {key} to {csv_path}")
+
+    def handle(self):
+        self.pkls_to_csv()
+
+    def handle_pred(self):
+        pass
 
 class CollectorMlrunDir(Collector):
     def __init__(self, config):
@@ -73,7 +91,7 @@ class CollectorMlrunDir(Collector):
     def get_all_exps(self):
         exps = R.list_experiments()
         for a, b in exps.items():
-            exp_info = ExperimentInfo(id=b.id, name=b.name, recorders=b.info['recorders'])
+            exp_info = ExperimentInfo(id=b.id, name=b.name, recorders=b.info['recorders'], config = self.config)
             self.experiment_list.append(exp_info)
 
     def show_all_exps(self):
@@ -90,6 +108,11 @@ class CollectorMlrunDir(Collector):
             logger.info(f"Loading PKL files for Experiment ID: {exp.id}, Name: {exp.name} rid: {exp.recorder.id}..")
             exp.load_pkl()
 
+    def handle_all_pkls(self):
+        logger.info("Handling PKL files for all experiments...")
+        for exp in self.experiment_list:
+            exp.handle()
+
     def analysis(self, mlrun_dir=None):
         if mlrun_dir is None:
             mlrun_dir = self.config.get_output_folder()
@@ -98,9 +121,10 @@ class CollectorMlrunDir(Collector):
         self.get_all_exps()
         self.show_all_exps()
         self.load_all_pkls()
+        self.handle_all_pkls()
 
 
 if __name__ == "__main__":
     cfig = utils.ConfigLoader()
     coll = CollectorMlrunDir(cfig)
-    coll.analysis("/home/ash/.qlibAssistant/2025-11-26-21/")
+    coll.analysis("/home/ash/.qlibAssistant/2025-11-27-20/")
