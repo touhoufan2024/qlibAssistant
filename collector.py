@@ -100,9 +100,27 @@ class ExperimentInfo:
         self.model_figs = analysis_model.model_performance_graph(self.pred_label, show_notebook=False)
         self.save_figures(self.model_figs, "model_performance")
 
+
+    def calc_ic(self):
+        ic = self.loaded_objects['ic_data']
+        ric = self.loaded_objects['ric_data']
+        self.IC = ic.mean()
+        self.ICIR = ic.mean() / ic.std()
+        self.RankIC = ric.mean()
+        self.RankICIR = ric.mean() / ric.std()
+
+        metrics = {
+            "IC": ic.mean(),
+            "ICIR": ic.mean() / ic.std(),
+            "Rank IC": ric.mean(),
+            "Rank ICIR": ric.mean() / ric.std(),
+        }
+        logger.info(metrics)
+
     def handle(self):
         self.pkls_to_csv()
         self.pkls_to_pictures()
+        self.calc_ic()
 
     def handle_pred(self):
         pass
