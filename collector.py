@@ -117,10 +117,19 @@ class ExperimentInfo:
         }
         logger.info(metrics)
 
+    def latest_date_score(self):
+        df = self.loaded_objects['pred']
+        latest_date = df.index.get_level_values('datetime').max()
+        latest_data = df.loc[latest_date]
+        csv_path = os.path.join(self.output_dir, "latest_score.csv")
+        latest_data.to_csv(csv_path)
+        logger.info(f"Saved latest date {latest_date} score to {csv_path}")
+
     def handle(self):
         self.pkls_to_csv()
         self.pkls_to_pictures()
         self.calc_ic()
+        self.latest_date_score()
 
     def handle_pred(self):
         pass
