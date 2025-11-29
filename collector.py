@@ -58,18 +58,51 @@ class ExperimentInfo:
         self.loaded_objects['label'] = self.recorder.load_object("label.pkl")
         self.loaded_objects['params'] = self.recorder.load_object("params.pkl")
 
+        self.pred_label = pd.concat([self.loaded_objects['label'], self.loaded_objects['pred']], axis=1, sort=True).reindex(self.loaded_objects['label'].index)
+        self.pred_label.columns = ['label', 'score']
+
+        self.output_dir= os.path.join(self.config.get_output_folder(),"myanalysis", self.name, self.recorder.experiment_id, self.recorder.id)
+        os.makedirs(self.output_dir, exist_ok=True)
+
     def pkls_to_csv(self):
-        output_dir= os.path.join(self.config.get_output_folder(),"myanalysis", self.name, self.recorder.experiment_id, self.recorder.id)
-        logger.info(f"Saving loaded PKL objects to CSV in directory: {output_dir}")
-        os.makedirs(output_dir, exist_ok=True)
+        logger.info(f"Saving loaded PKL objects to CSV in directory: {self.output_dir}")
         for key, df in self.loaded_objects.items():
-            if isinstance(df, pd.DataFrame):
-                csv_path = os.path.join(output_dir, f"{key}.csv")
+            if isinstance(df, pd.DataFrame) or isinstance(df, pd.Series):
+                csv_path = os.path.join(self.output_dir, f"{key}.csv")
                 df.to_csv(csv_path)
                 logger.info(f"Saved {key} to {csv_path}")
 
+    def save_figures(self, fig_list, prefix):
+        for i, fig in enumerate(fig_list):
+            base_name = f"{prefix}_{i:02d}"
+            img_path = os.path.join(self.output_dir, f"{base_name}.png")
+            logger.info(f"save pic: {img_path}")
+
+            fig.write_image(
+                img_path,
+                format="png",
+                width=1200,
+                height=800,
+                scale=2
+            )
+
+    def pkls_to_pictures(self):
+        logger.info(f"Saving loaded PKL objects to pictures in directory: {self.output_dir}")
+        self.report_figs = analysis_position.report_graph(self.loaded_objects['report_normal_1day'], show_notebook=False)
+        self.save_figures(self.report_figs, "report")
+
+        self.risk_figs = analysis_position.risk_analysis_graph(self.loaded_objects['port_analysis_1day'], self.loaded_objects['report_normal_1day'], show_notebook=False)
+        self.save_figures(self.risk_figs, "risk_analysis")
+
+        self.ic_figs = analysis_position.score_ic_graph(self.pred_label, show_notebook=False)
+        self.save_figures(self.ic_figs, "score_ic")
+
+        self.model_figs = analysis_model.model_performance_graph(self.pred_label, show_notebook=False)
+        self.save_figures(self.model_figs, "model_performance")
+
     def handle(self):
         self.pkls_to_csv()
+        self.pkls_to_pictures()
 
     def handle_pred(self):
         pass
