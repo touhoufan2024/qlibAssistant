@@ -1,5 +1,6 @@
 import tomllib
 import os
+import shutil
 from datetime import datetime
 from loguru import logger
 
@@ -37,7 +38,10 @@ class ConfigLoader:
     def get_yamls_list(self):
         ret = []
         for item in self.config.get("qlib_yamls", []):
-            ret.append(os.path.join(self.config["qlib_path"], item))
+            source = os.path.join(self.config["qlib_path"], item)
+            dest = os.path.join(self.output_folder, os.path.basename(item))
+            shutil.copyfile(source, dest)
+            ret.append(dest)
         return ret
 
     def get_yaml_name(self, yaml):
@@ -52,6 +56,7 @@ class ConfigLoader:
 
 if __name__ == "__main__":
     cl = ConfigLoader()
+    cl.mkdir_output_folder()
     print(cl.get_output_folder())
     print(cl.get_yamls_list())
     print(cl.get_qrun_cmd_list())
