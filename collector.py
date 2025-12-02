@@ -176,6 +176,8 @@ class CollectorMlrunDir(Collector):
     def analysis(self, mlrun_dir=None):
         if mlrun_dir is None:
             mlrun_dir = self.config.get_output_folder()
+        else:
+            self.config.output_folder = mlrun_dir
         logger.info(f"Analyzing mlrun dir: {mlrun_dir} ...")
         self.qlib_init(mlrun_dir)
         self.get_all_exps()
