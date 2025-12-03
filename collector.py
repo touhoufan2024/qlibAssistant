@@ -1,5 +1,6 @@
 
 from abc import ABC, abstractmethod
+from datetime import date
 from utils import get_config
 import os
 from loguru import logger
@@ -125,11 +126,57 @@ class ExperimentInfo:
         latest_data.to_csv(csv_path)
         logger.info(f"Saved latest date {latest_date} score to {csv_path}")
 
+    def gen_total_results(self):
+        total_file = self.config.get_total_file_name()
+
+        # 汇总
+        df = self.loaded_objects['pred']
+        n = 5  # 最近n天
+        m = 10 # 每天前m名
+        latest_dates = df.index.get_level_values('datetime').unique().sort_values(ascending=False)[:n]
+        # 筛选最新日期相关数据
+        latest_data = df.loc[df.index.get_level_values('datetime').isin(latest_dates)]
+        csv_path = os.path.join(self.output_dir, "latest_score_n.csv")
+        latest_data.to_csv(csv_path)
+        logger.info(f"Saved latest date {latest_dates} score to {csv_path}")
+
+
+        sorted_tables = {}  # 用于存储排序后的每个表（以日期为 key）
+        markdown_table = {}
+        for date in latest_dates:
+            daily_data = latest_data.loc[latest_data.index.get_level_values('datetime') == date]
+
+            sorted_daily_data = daily_data.sort_values(by='score', ascending=False)  # 降序排分，可改为 ascending=True
+            sorted_daily_data = sorted_daily_data.reset_index()  # 将索引 "datetime" 和 "instrument" 转化为普通列
+            sorted_daily_data.columns = ['datetime', 'instrument', 'score']  # 为列命名
+            top_m_data = sorted_daily_data.head(m)
+            sorted_tables[date] = top_m_data  # 存储结果到字典中
+            markdown_table[date] = top_m_data.to_markdown(index=True)
+
+        # 写入总文件
+        with open(total_file, "a") as f:
+            f.write(f"## Experiment: {self.name} (ID: {self.id})\n")
+            f.write(f"- Recorder ID: {self.recorder.id}\n")
+            f.write(f"- start time {self.recorder.start_time}\n")
+            f.write(f"- end time {self.recorder.end_time}\n")
+            f.write(f"- para {self.loaded_objects['params'].params}\n")
+            f.write(f"- IC: {self.IC:.6f}\n")
+            f.write(f"- ICIR: {self.ICIR:.6f}\n")
+            f.write(f"- Rank IC: {self.RankIC:.6f}\n")
+            f.write(f"- Rank ICIR: {self.RankICIR:.6f}\n")
+            for date, table in markdown_table.items():
+                f.write(f"\n### Top {m} Scores for Date: {date.date()}\n")
+                f.write(table)
+            f.write("\n")
+        logger.info(f"Appended results to {total_file}")
+
     def handle(self):
         self.pkls_to_csv()
         self.pkls_to_pictures()
         self.calc_ic()
         self.latest_date_score()
+        self.gen_total_results()
+        print(self.config.get_total_file_name())
 
     def handle_pred(self):
         pass
@@ -189,4 +236,5 @@ class CollectorMlrunDir(Collector):
 if __name__ == "__main__":
     cfig = utils.ConfigLoader()
     coll = CollectorMlrunDir(cfig)
-    coll.analysis("/home/ash/.qlibAssistant/2025-11-27-20/")
+    # coll.analysis("/home/ash/.qlibAssistant/2025-12-01-23/")
+    coll.analysis("/home/ash/.qlibAssistant/2025-12-04-00/")

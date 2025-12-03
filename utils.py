@@ -22,6 +22,10 @@ class ConfigLoader:
         self.output_folder =  os.path.expanduser(os.path.join(self.config["output_path"], datetime.now().strftime("%Y-%m-%d-%H")))
         self.output_folder_is_exist = False
 
+        file_path = os.path.join(self.output_folder, "total_results.md")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
     def mkdir_output_folder(self):
         logger.info(f"mkdir: {self.output_folder}")
         if os.path.isdir(self.output_folder):
@@ -34,6 +38,9 @@ class ConfigLoader:
 
     def output_folder_is_exists(self):
         return self.output_folder_is_exist
+    
+    def get_total_file_name(self):
+        return os.path.join(self.output_folder, "total_results.md")
     
     def get_yamls_list(self):
         ret = []
