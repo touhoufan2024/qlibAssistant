@@ -26,6 +26,13 @@ class ConfigLoader:
         if os.path.exists(file_path):
             os.remove(file_path)
 
+        self.train_s = self.config.get("train", [])[0]
+        self.train_e = self.config.get("train", [])[1]
+        self.valid_s = self.config.get("valid", [])[0]
+        self.valid_e = self.config.get("valid", [])[1]
+        self.test_s = self.config.get("test", [])[0]
+        self.test_e = self.config.get("test", [])[1]
+
     def mkdir_output_folder(self):
         logger.info(f"mkdir: {self.output_folder}")
         if os.path.isdir(self.output_folder):
@@ -42,6 +49,10 @@ class ConfigLoader:
     def get_total_file_name(self):
         return os.path.join(self.output_folder, "total_results.md")
     
+
+    def replace_yaml_date(self, yaml_path):
+        pass
+
     def get_yamls_list(self):
         ret = []
         for item in self.config.get("qlib_yamls", []):
