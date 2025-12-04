@@ -3,6 +3,34 @@ import os
 import shutil
 from datetime import datetime
 from loguru import logger
+import re
+
+def replace_in_file(file_path, regex_pattern, replacement):
+    """
+    在指定文件中查找匹配正则表达式的部分并替换为指定字符串。
+
+    :param file_path: 要处理的文件路径
+    :param regex_pattern: 匹配的正则表达式（支持多行匹配）
+    :param replacement: 要替换成的字符串
+    """
+    try:
+        # 读取原始文件内容
+        with open(file_path, 'r') as file:
+            content = file.read()
+
+        # 使用正则表达式进行替换
+        modified_content = re.sub(regex_pattern, replacement, content)
+
+        # 将修改后的内容写入同一个文件
+        with open(file_path, 'w') as file:
+            file.write(modified_content)
+
+        # print("替换完成！")
+
+    except FileNotFoundError:
+        print(f"错误：找不到文件 {file_path}")
+    except Exception as e:
+        print(f"发生错误：{e}")
 
 def get_config(filename="config.toml"):
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -50,8 +78,27 @@ class ConfigLoader:
         return os.path.join(self.output_folder, "total_results.md")
     
 
-    def replace_yaml_date(self, yaml_path):
-        pass
+    def modify_a_yaml(self, yaml_path):
+        regex_pattern = r'(data_handler_config:\s*&data_handler_config\s*\n\s*start_time:\s*\d{4}-\d{2}-\d{2}\s*\n\s*end_time:\s*\d{4}-\d{2}-\d{2}\s*\n\s*fit_start_time:\s*\d{4}-\d{2}-\d{2}\s*\n\s*fit_end_time:\s*\d{4}-\d{2}-\d{2})'
+        replacement = f"data_handler_config: &data_handler_config\n    start_time: {self.train_s}\n    end_time: {self.test_e}\n    fit_start_time: {self.train_s}\n    fit_end_time: {self.train_e}"
+        replace_in_file(yaml_path, regex_pattern, replacement)
+
+        regex_pattern = r'(backtest:\s*\n\s*start_time:\s*\d{4}-\d{2}-\d{2}\s*\n\s*end_time:\s*\d{4}-\d{2}-\d{2})'
+        replacement = f"""backtest:
+        start_time: {self.test_s}
+        end_time: {self.test_e}"""  # 替换为新的配置内容
+
+        replace_in_file(yaml_path, regex_pattern, replacement)
+
+
+        regex_pattern = r'(segments:\s*\n\s*train:\s*\[\d{4}-\d{2}-\d{2},\s*\d{4}-\d{2}-\d{2}\]\s*\n\s*valid:\s*\[\d{4}-\d{2}-\d{2},\s*\d{4}-\d{2}-\d{2}\]\s*\n\s*test:\s*\[\d{4}-\d{2}-\d{2},\s*\d{4}-\d{2}-\d{2}\])'
+        replacement = f"""segments:
+                train: [{self.train_s}, {self.train_e}]
+                valid: [{self.valid_s}, {self.valid_e}]
+                test: [{self.test_s}, {self.test_e}]"""  # 替换为新的配置内容
+        replace_in_file(yaml_path, regex_pattern, replacement)
+
+        logger.info(f"modify yaml: {yaml_path}")
 
     def get_yamls_list(self):
         ret = []
@@ -62,6 +109,10 @@ class ConfigLoader:
             ret.append(dest)
         return ret
 
+    def modify_all_yamls(self):
+        for item in self.get_yamls_list():
+            self.modify_a_yaml(item)
+
     def get_yaml_name(self, yaml):
         return os.path.basename(yaml).replace(".yaml", "")
 
@@ -69,6 +120,7 @@ class ConfigLoader:
         ret = []
         for item in self.get_yamls_list():
             ret.append(f"qrun -e {self.get_yaml_name(item)}  -u {self.get_output_folder()} {item}")
+        self.modify_all_yamls()
         return ret
 
 
@@ -78,3 +130,4 @@ if __name__ == "__main__":
     print(cl.get_output_folder())
     print(cl.get_yamls_list())
     print(cl.get_qrun_cmd_list())
+    cl.modify_all_yamls()
