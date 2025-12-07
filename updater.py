@@ -108,7 +108,7 @@ def get_real_github_hash(repo_url, target_filename):
 
 
 def get_latest_url(base_url):
-    response = requests.get(base_url, allow_redirects=True)
+    response = requests.get(base_url, allow_redirects=True, timeout=(5, 10))
     response.raise_for_status()
     return response.url
 
