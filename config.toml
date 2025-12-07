@@ -1,8 +1,30 @@
 qlib_path = "/home/ash/quant/qlib"
 
 qlib_yamls = [
+    "examples/benchmarks/XGBoost/workflow_config_xgboost_Alpha360.yaml",
+    "examples/benchmarks/XGBoost/workflow_config_xgboost_Alpha158.yaml",
+    "examples/benchmarks/Linear/workflow_config_linear_Alpha158_csi500.yaml",
+    "examples/benchmarks/Linear/workflow_config_linear_Alpha158_multi_pass_bt.yaml",
+    "examples/benchmarks/Linear/workflow_config_linear_Alpha158.yaml",
+    "examples/benchmarks/KRNN/workflow_config_krnn_Alpha360.yaml",
+    "examples/benchmarks/LightGBM/workflow_config_lightgbm_Alpha360_csi500.yaml",
+    "examples/benchmarks/LightGBM/workflow_config_lightgbm_Alpha158_multi_freq.yaml",
+    "examples/benchmarks/LightGBM/workflow_config_lightgbm_Alpha158_csi500.yaml",
+    "examples/benchmarks/LightGBM/workflow_config_lightgbm_configurable_dataset.yaml",
     "examples/benchmarks/LightGBM/workflow_config_lightgbm_Alpha158.yaml",
     "examples/benchmarks/LightGBM/workflow_config_lightgbm_Alpha360.yaml",
+    "examples/benchmarks/LightGBM/workflow_config_lightgbm_multi_freq.yaml",
+    "examples/benchmarks/Sandwich/workflow_config_sandwich_Alpha360.yaml",
+    "examples/benchmarks/TFT/workflow_config_tft_Alpha158.yaml",
+    "examples/benchmarks/DoubleEnsemble/workflow_config_doubleensemble_Alpha158_csi500.yaml",
+    "examples/benchmarks/DoubleEnsemble/workflow_config_doubleensemble_Alpha360_csi500.yaml",
+    "examples/benchmarks/DoubleEnsemble/workflow_config_doubleensemble_Alpha360.yaml",
+    "examples/benchmarks/DoubleEnsemble/workflow_config_doubleensemble_Alpha158.yaml",
+    "examples/benchmarks/DoubleEnsemble/workflow_config_doubleensemble_early_stop_Alpha158.yaml",
+    "examples/benchmarks/CatBoost/workflow_config_catboost_Alpha360.yaml",
+    "examples/benchmarks/CatBoost/workflow_config_catboost_Alpha158.yaml",
+    "examples/benchmarks/CatBoost/workflow_config_catboost_Alpha360_csi500.yaml",
+    "examples/benchmarks/CatBoost/workflow_config_catboost_Alpha158_csi500.yaml",
 ]
 
 output_path = "~/.qlibAssistant/"
