@@ -133,7 +133,7 @@ class DataUpdaterFromGithub(DataUpdater):
         self.proxyB = "https://hk.gh-proxy.org/"
         self.proxyC = "https://cdn.gh-proxy.org/"
         self.proxyD = "https://edgeone.gh-proxy.org/"
-        self.wget_cmd = f"wget --no-proxy {self.proxyA}{self.url} -O /tmp/qlib_bin.tar.gz"
+        self.wget_cmd = f"wget --no-proxy {self.proxyB}{self.url} -O /tmp/qlib_bin.tar.gz"
 
     def need_update(self):
         target_filename = "qlib_bin.tar.gz"

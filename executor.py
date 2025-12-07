@@ -25,9 +25,10 @@ class ExecuteYamls(Execute):
         self.config = config
 
     def runTask(self, cmd):
+        examples_qlib_path = os.path.join(self.config.config["qlib_path"], "examples")
         logger.info(f"Executing command: {cmd}")
         try:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True, cwd=examples_qlib_path,)
             logger.info("命令输出:")
             logger.info(result.stdout)
             return result.stdout  # 返回命令输出字符串

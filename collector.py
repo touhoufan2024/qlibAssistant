@@ -159,7 +159,7 @@ class ExperimentInfo:
             f.write(f"- Recorder ID: {self.recorder.id}\n")
             f.write(f"- start time {self.recorder.start_time}\n")
             f.write(f"- end time {self.recorder.end_time}\n")
-            f.write(f"- para {self.loaded_objects['params'].params}\n")
+            # f.write(f"- para {self.loaded_objects['params'].params}\n")
             f.write(f"- IC: {self.IC:.6f}\n")
             f.write(f"- ICIR: {self.ICIR:.6f}\n")
             f.write(f"- Rank IC: {self.RankIC:.6f}\n")

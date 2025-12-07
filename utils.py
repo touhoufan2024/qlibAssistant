@@ -103,6 +103,8 @@ class ConfigLoader:
     def get_yamls_list(self):
         ret = []
         for item in self.config.get("qlib_yamls", []):
+            if "#" in item:
+                continue
             source = os.path.join(self.config["qlib_path"], item)
             dest = os.path.join(self.output_folder, os.path.basename(item))
             shutil.copyfile(source, dest)
