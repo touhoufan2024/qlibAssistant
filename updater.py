@@ -128,14 +128,18 @@ class DataUpdaterFromGithub(DataUpdater):
     def __init__(self, config):
         super().__init__(config)
         self.url = "https://github.com/chenditc/investment_data/releases/latest/download/qlib_bin.tar.gz"
-        self.url0 = get_latest_url("https://github.com/chenditc/investment_data/releases/latest")
-        self.proxyA = "https://gh-proxy.org/"
-        self.proxyB = "https://hk.gh-proxy.org/"
-        self.proxyC = "https://cdn.gh-proxy.org/"
-        self.proxyD = "https://edgeone.gh-proxy.org/"
-        self.wget_cmd = f"wget --no-proxy {self.proxyB}{self.url} -O /tmp/qlib_bin.tar.gz"
+        if self.config.parse().update == 1:
+            self.url0 = get_latest_url("https://github.com/chenditc/investment_data/releases/latest")
+            self.proxyA = "https://gh-proxy.org/"
+            self.proxyB = "https://hk.gh-proxy.org/"
+            self.proxyC = "https://cdn.gh-proxy.org/"
+            self.proxyD = "https://edgeone.gh-proxy.org/"
+            self.wget_cmd = f"wget --no-proxy {self.proxyB}{self.url} -O /tmp/qlib_bin.tar.gz"
 
     def need_update(self):
+        if self.config.parse().update == 0:
+            logger.info(f"no need updata data due to cmd args...")
+            return False
         target_filename = "qlib_bin.tar.gz"
         github_hash = get_real_github_hash(self.url0, target_filename)
         logger.info(f"get github hash: {github_hash}")

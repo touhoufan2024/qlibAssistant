@@ -50,9 +50,14 @@ class ExecuteYamls(Execute):
 
     def runTasks(self):
         self.config.mkdir_output_folder()
-        if self.config.output_folder_is_exists():
+        if self.config.output_folder_is_exists() and self.config.parse().force == 0:
             logger.info("Output folder already exists, skipping execution.")
             return None
+        if self.config.parse().force == 0:
+            logger.info("Force execution is disabled, skipping execution.")
+            return None
+        self.config.rm_output_folder()
+        self.config.mkdir_output_folder()
         for cmd in self.config.get_qrun_cmd_list():
             self.runTask(cmd)
 
@@ -60,5 +65,4 @@ class ExecuteYamls(Execute):
 if __name__ == "__main__":
     cfig = utils.ConfigLoader()
     exec = ExecuteYamls(cfig)
-    print(exec.config.get_qrun_cmd_list())
     exec.runTasks()

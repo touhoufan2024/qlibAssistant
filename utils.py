@@ -5,6 +5,8 @@ from datetime import datetime
 from loguru import logger
 import re
 
+import argparse
+
 def replace_in_file(file_path, regex_pattern, replacement):
     """
     在指定文件中查找匹配正则表达式的部分并替换为指定字符串。
@@ -46,6 +48,9 @@ def get_config(filename="config.toml"):
 
 class ConfigLoader:
     def __init__(self, filename="config.toml"):
+        self.parser = argparse.ArgumentParser(description="cmd arguments parser")
+        self._add_arguments()  # 添加具体参数
+
         self.config = get_config(filename)
         self.output_folder =  os.path.expanduser(os.path.join(self.config["output_path"], datetime.now().strftime("%Y-%m-%d-%H")))
         self.output_folder_is_exist = False
@@ -61,12 +66,39 @@ class ConfigLoader:
         self.test_s = self.config.get("test", [])[0]
         self.test_e = self.config.get("test", [])[1]
 
+    def _add_arguments(self):
+        self.parser.add_argument(
+            '-u', '--update',
+            type=int,                # 接收整数类型参数（0 或 1）
+            choices=[0, 1],          # 限制输入值为 0 或 1
+            default=1,               # 默认值为 True (1)
+            help='是否更新数据，默认值为 1（启用）。使用 0 来关闭'
+        )
+        # 参数 2：是否强制执行实验，默认值为 True
+        self.parser.add_argument(
+            '-f', '--force',
+            type=int,                # 接收整数类型参数（0 或 1）
+            choices=[0, 1],          # 限制输入值为 0 或 1
+            default=1,               # 默认值为 True (1)
+            help='是否强制执行实验，默认值为 1（启用）。使用 0 来关闭'
+        )
+    def parse(self):
+        """
+        对外暴露的解析方法，用于解析命令行参数
+        """
+        return self.parser.parse_args()
+
     def mkdir_output_folder(self):
         logger.info(f"mkdir: {self.output_folder}")
         if os.path.isdir(self.output_folder):
             logger.info(f"out folder is exist: {self.output_folder}")
             self.output_folder_is_exist = True
         os.makedirs(self.output_folder, exist_ok=True)
+
+    def rm_output_folder(self):
+        logger.info(f"rm -rf: {self.output_folder}")
+        if os.path.isdir(self.output_folder):
+            shutil.rmtree(self.output_folder)
 
     def get_output_folder(self):
         return self.output_folder
@@ -128,6 +160,7 @@ class ConfigLoader:
 
 if __name__ == "__main__":
     cl = ConfigLoader()
+    print(cl.parse())
     cl.mkdir_output_folder()
     print(cl.get_output_folder())
     print(cl.get_yamls_list())
