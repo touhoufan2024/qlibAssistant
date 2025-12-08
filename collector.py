@@ -24,6 +24,26 @@ from loguru import logger
 from dataclasses import dataclass, field
 from typing import List
 
+import pypandoc
+
+def convert_to_pdf(input_file, output_file):
+    try:
+        pypandoc.convert_file(
+            input_file,
+            'pdf',
+            outputfile=output_file,
+            extra_args=[
+                '--pdf-engine=xelatex',
+                # 修改这里：将字体改为 Linux 上存在的字体
+                '-V', 'mainfont=WenQuanYi Micro Hei',
+                # 为了保险，也可以指定 CJK 字体
+                '-V', 'CJKmainfont=WenQuanYi Micro Hei'
+            ]
+        )
+        print("转换成功！")
+    except Exception as e:
+        print(f"转换出错: {e}")
+
 # 统计 某个mlrun目录内的结果
 # 重点关注的内容有 label 的排序, 以及性能的排序
 
@@ -170,6 +190,9 @@ class ExperimentInfo:
             f.write("\n")
         logger.info(f"Appended results to {total_file}")
 
+        convert_to_pdf(total_file, self.config.get_total_pdf_file_name())
+        logger.info(f"Appended results to PDF {self.config.get_total_pdf_file_name()}")
+
     def handle(self):
         self.pkls_to_csv()
         self.pkls_to_pictures()
@@ -237,4 +260,4 @@ if __name__ == "__main__":
     cfig = utils.ConfigLoader()
     coll = CollectorMlrunDir(cfig)
     # coll.analysis("/home/ash/.qlibAssistant/2025-12-01-23/")
-    coll.analysis("/home/ash/.qlibAssistant/2025-12-04-00/")
+    coll.analysis("/home/ash/.qlibAssistant/2025-12-08-23/")

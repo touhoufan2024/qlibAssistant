@@ -109,6 +109,9 @@ class ConfigLoader:
     def get_total_file_name(self):
         return os.path.join(self.output_folder, "total_results.md")
     
+    def get_total_pdf_file_name(self):
+        return os.path.join(self.output_folder, "total_results.pdf")
+
 
     def modify_a_yaml(self, yaml_path):
         regex_pattern = r'(data_handler_config:\s*&data_handler_config\s*\n\s*start_time:\s*\d{4}-\d{2}-\d{2}\s*\n\s*end_time:\s*\d{4}-\d{2}-\d{2}\s*\n\s*fit_start_time:\s*\d{4}-\d{2}-\d{2}\s*\n\s*fit_end_time:\s*\d{4}-\d{2}-\d{2})'
