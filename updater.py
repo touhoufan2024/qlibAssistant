@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from utils import get_config
+import utils
 import os
 from loguru import logger
 import requests
@@ -163,5 +164,6 @@ class DataUpdaterFromGithub(DataUpdater):
         pass
 
 if __name__ == "__main__":
-    dataupdatater = DataUpdaterFromGithub(get_config())
+    cfig = utils.ConfigLoader()
+    dataupdatater = DataUpdaterFromGithub(cfig)
     dataupdatater.update_data()

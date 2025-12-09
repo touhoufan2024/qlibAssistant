@@ -66,6 +66,8 @@ class ConfigLoader:
         self.test_s = self.config.get("test", [])[0]
         self.test_e = self.config.get("test", [])[1]
 
+        logger.info(f"cmd arguments is {self.parse()}")
+
     def _add_arguments(self):
         self.parser.add_argument(
             '-u', '--update',
