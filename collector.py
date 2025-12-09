@@ -190,12 +190,12 @@ class ExperimentInfo:
             f.write("\n")
         logger.info(f"Appended results to {total_file}")
 
-        convert_to_pdf(total_file, self.config.get_total_pdf_file_name())
+        # convert_to_pdf(total_file, self.config.get_total_pdf_file_name())
         logger.info(f"Appended results to PDF {self.config.get_total_pdf_file_name()}")
 
     def handle(self):
         self.pkls_to_csv()
-        self.pkls_to_pictures()
+        # self.pkls_to_pictures()
         self.calc_ic()
         self.latest_date_score()
         self.gen_total_results()
