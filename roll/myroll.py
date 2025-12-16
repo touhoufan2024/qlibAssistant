@@ -111,10 +111,23 @@ class RollingTaskExample:
         print(collector())
 
     def main(self):
-        self.reset()
+        # self.reset()
         tasks = self.task_generating()
         self.task_training(tasks)
         self.task_collecting()
+
+    def ls(self):
+        logger.info("Listing all tasks in the task pool:")
+        exps = R.list_experiments()
+
+        for a, b in exps.items():
+            if a == 'Default':
+                continue
+            exp = R.get_exp(experiment_name=a)
+            for rid in exp.list_recorders():
+                print(f"Experiment: {a}, Recorder ID: {rid}")
+            print(b)
+
 
 
 if __name__ == "__main__":
