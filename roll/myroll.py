@@ -13,6 +13,7 @@ import fire
 import qlib
 from qlib.constant import REG_CN
 from qlib.workflow import R
+from qlib.config import C
 from qlib.workflow.task.gen import RollingGen, task_generator
 from qlib.workflow.task.manage import TaskManager, run_task
 from qlib.workflow.task.collect import RecorderCollector
@@ -20,6 +21,9 @@ from qlib.model.ens.group import RollingGroup
 from qlib.model.trainer import TrainerR, TrainerRM, task_train
 from myconfig import CSI300_RECORD_LGB_TASK_CONFIG, CSI100_RECORD_XGBOOST_TASK_CONFIG
 from loguru import logger
+from pathlib import Path
+import sys
+import os
 
 class RollingTaskExample:
     def __init__(
@@ -33,6 +37,7 @@ class RollingTaskExample:
         task_config=None,
         rolling_step=50,
         rolling_type=RollingGen.ROLL_EX,
+        uri_folder="mlruns",
     ):
         # TaskManager config
         if task_config is None:
@@ -41,7 +46,9 @@ class RollingTaskExample:
             "task_url": task_url,
             "task_db_name": task_db_name,
         }
-        qlib.init(provider_uri=provider_uri, region=region, mongo=mongo_conf)
+        exp_manager = C["exp_manager"]
+        exp_manager["kwargs"]["uri"] = "file:" + str(Path(os.getcwd()).resolve() / uri_folder)
+        qlib.init(provider_uri=provider_uri, region=region, mongo=mongo_conf, exp_manager=exp_manager)
         self.experiment_name = experiment_name
         if task_pool is None:
             self.trainer = TrainerR(experiment_name=self.experiment_name)

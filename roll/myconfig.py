@@ -68,9 +68,9 @@ def get_data_handler_config(
 
 def get_dataset_config(
     dataset_class=DATASET_ALPHA158_CLASS,
-    train=("2008-01-01", "2020-12-31"),
-    valid=("2021-01-01", "2023-12-31"),
-    test=("2024-01-01", "2025-08-01"),
+    train=("2010-01-01", "2019-12-31"),
+    valid=("2020-01-01", "2021-12-31"),
+    test=("2022-01-01", "2025-12-10"),
     handler_kwargs={"instruments": CSI300_MARKET},
 ):
     return {
