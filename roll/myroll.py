@@ -124,9 +124,12 @@ class RollingTaskExample:
             if a == 'Default':
                 continue
             exp = R.get_exp(experiment_name=a)
+            print(f"Experiment: {a} {exp}")
             for rid in exp.list_recorders():
-                print(f"Experiment: {a}, Recorder ID: {rid}")
-            print(b)
+                rec = exp.get_recorder(recorder_id=rid)
+                # task = rec.load_object("pred.pkl")
+                task = 123
+                print(f"        record info:{rec} {task}")
 
 
 
