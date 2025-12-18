@@ -6,7 +6,8 @@ This example shows how a TrainerRM works based on TaskManager with rolling tasks
 After training, how to collect the rolling results will be shown in task_collecting.
 Based on the ability of TaskManager, `worker` method offer a simple way for multiprocessing.
 """
-
+import os
+os.environ["TQDM_DISABLE"] = "1"
 from pprint import pprint
 
 import fire
@@ -23,7 +24,6 @@ from myconfig import CSI300_RECORD_LGB_TASK_CONFIG, CSI100_RECORD_XGBOOST_TASK_C
 from loguru import logger
 from pathlib import Path
 import sys
-import os
 
 class RollingTaskExample:
     def __init__(
@@ -48,6 +48,7 @@ class RollingTaskExample:
         }
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(os.getcwd()).resolve() / uri_folder)
+        logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
         qlib.init(provider_uri=provider_uri, region=region, mongo=mongo_conf, exp_manager=exp_manager)
         self.experiment_name = experiment_name
         if task_pool is None:
@@ -124,12 +125,17 @@ class RollingTaskExample:
             if a == 'Default':
                 continue
             exp = R.get_exp(experiment_name=a)
-            print(f"Experiment: {a} {exp}")
+            # print(f"Experiment: {a} {exp}")
             for rid in exp.list_recorders():
                 rec = exp.get_recorder(recorder_id=rid)
                 # task = rec.load_object("pred.pkl")
                 task = 123
-                print(f"        record info:{rec} {task}")
+                print(rec.get_artifact_uri())
+                if not rec.list_artifacts():
+                    continue
+                # print(rec.load_object("task"))
+                # print(rec.list_artifacts())
+                # print(f"        record info:{rec} {task}")
 
 
 
