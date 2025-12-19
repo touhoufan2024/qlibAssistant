@@ -1,5 +1,7 @@
 from loguru import logger
+from utils import run_command, get_latest_url, get_real_github_hash, calculate_file_sha256
 import sys
+import subprocess
 logger.remove()
 logger.add(
     sys.stderr,
@@ -12,18 +14,49 @@ class DataCLI:
     """
     def __init__(self, region):
         self.region = region
+        self.url = "https://github.com/chenditc/investment_data/releases/latest/download/qlib_bin.tar.gz"
+        self.url0 = get_latest_url("https://github.com/chenditc/investment_data/releases/latest")
+        self.proxyA = "https://gh-proxy.org/"
+        self.proxyB = "https://hk.gh-proxy.org/"
+        self.proxyC = "https://cdn.gh-proxy.org/"
+        self.proxyD = "https://edgeone.gh-proxy.org/"
 
-    def update(self, days=0, mode="replace"):
+    def need_update(self):
+        target_filename = "qlib_bin.tar.gz"
+        github_hash = get_real_github_hash(self.url0, target_filename)
+        logger.info(f"get github hash: {github_hash}")
+        local_hash = calculate_file_sha256("/tmp/qlib_bin.tar.gz")
+        logger.info(f"get local hash: {local_hash}")
+        if github_hash == local_hash:
+            return False
+        return True
+
+    def update(self, proxy = "A"):
         """
         更新 A 股数据
-        :param days: 回滚更新的天数 (默认0，即只更最新)
-        :param mode: 更新模式 (replace/append)
+        :param proxy: 使用的代理选项 (A/B/C/D)
         """
-        logger.info(f"正在更新 [{self.region}] 市场数据 | 回滚天数: {days} | 模式: {mode}")
-        # TODO: 调用 qlib/scripts/get_data.py 或相关 API
-        # cmd = f"python -m qlib.run.get_data --target_dir ... --interval 1d --region {self.region}"
-        # subprocess.run(cmd, shell=True
-        logger.success("数据更新任务已触发 (模拟)")
+        logger.info(f"正在更新 [{self.region}] 市场数据")
+        if self.need_update():
+            logger.info(f"need updata data for Qlib...{self.url}")
+        else:
+            logger.info(f"no need updata data for Qlib...{self.url}")
+            return
+
+        proxy_map = {
+            "A": self.proxyA,
+            "B": self.proxyB,
+            "C": self.proxyC,
+            "D": self.proxyD
+        }
+        use_proxy = proxy_map.get(proxy.upper(), proxy)
+        self.wget_cmd = f"wget --no-proxy {use_proxy}{self.url} -O /tmp/qlib_bin.tar.gz"
+        logger.info(f"使用代理 [{proxy}] 下载数据包...")
+
+        subprocess.run(self.wget_cmd, shell=True)
+        subprocess.run("tar -zxvf /tmp/qlib_bin.tar.gz -C ~/.qlib/qlib_data/cn_data --strip-components=1", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        logger.info(f"数据更新完成。")
+        self.status()
 
     def status(self):
         """检查本地数据最新日期"""

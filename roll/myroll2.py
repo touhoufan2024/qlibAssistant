@@ -4,7 +4,7 @@ import fire
 from loguru import logger
 import requests
 import subprocess
-from until import run_command
+from utils import run_command
 from datacli import DataCLI
 from traincli import TrainCLI
 from modelcli import ModelCLI
