@@ -15,7 +15,6 @@ class DataCLI:
     def __init__(self, region):
         self.region = region
         self.url = "https://github.com/chenditc/investment_data/releases/latest/download/qlib_bin.tar.gz"
-        self.url0 = get_latest_url("https://github.com/chenditc/investment_data/releases/latest")
         self.proxyA = "https://gh-proxy.org/"
         self.proxyB = "https://hk.gh-proxy.org/"
         self.proxyC = "https://cdn.gh-proxy.org/"
@@ -23,6 +22,7 @@ class DataCLI:
 
     def need_update(self):
         target_filename = "qlib_bin.tar.gz"
+        self.url0 = get_latest_url("https://github.com/chenditc/investment_data/releases/latest")
         github_hash = get_real_github_hash(self.url0, target_filename)
         logger.info(f"get github hash: {github_hash}")
         local_hash = calculate_file_sha256("/tmp/qlib_bin.tar.gz")
