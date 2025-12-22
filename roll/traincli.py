@@ -11,7 +11,7 @@ class TrainCLI:
     """
     [子模块] 训练引擎: 负责滚动训练 (Rolling)
     """
-    def __init__(self, exp_name):
+    def __init__(self, exp_name, **kwargs):
         self.exp_name = exp_name
 
     def init(self, model="LGB", step=20):

@@ -12,7 +12,7 @@ class DataCLI:
     """
     [子模块] 数据管理: 负责行情数据的下载、更新与检查
     """
-    def __init__(self, region):
+    def __init__(self, region, **kwargs):
         self.region = region
         self.url = "https://github.com/chenditc/investment_data/releases/latest/download/qlib_bin.tar.gz"
         self.proxyA = "https://gh-proxy.org/"

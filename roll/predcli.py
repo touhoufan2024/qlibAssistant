@@ -10,7 +10,7 @@ class PredCLI:
     """
     [子模块] 实盘决策: 生成信号与诊断
     """
-    def __init__(self, exp_name):
+    def __init__(self, exp_name, **kwargs):
         self.exp_name = exp_name
 
     def today(self, top=50, out="buy_list.csv", filter_st=True):

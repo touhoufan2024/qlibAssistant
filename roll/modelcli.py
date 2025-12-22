@@ -10,7 +10,7 @@ class ModelCLI:
     """
     [子模块] 模型仓库: 管理历史模型切片
     """
-    def __init__(self, exp_name):
+    def __init__(self, exp_name, **kwargs):
         self.exp_name = exp_name
 
     def ls(self, limit=10, sort="date"):

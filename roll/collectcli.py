@@ -10,7 +10,7 @@ class CollectCLI:
     """
     [子模块] 统计
     """
-    def __init__(self, exp_name):
+    def __init__(self, exp_name, **kwargs):
         self.exp_name = exp_name
 
     def tdx(self, top=30, path="C:/new_qlib.blk"):
