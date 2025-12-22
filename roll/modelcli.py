@@ -44,18 +44,6 @@ class ModelCLI:
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
         qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
 
-    def ls(self, limit=10, sort="date"):
-        """
-        列出所有子模型
-        :param limit: 显示数量
-        :param sort: 排序方式 (date/metric)
-        """
-        logger.info(f"列出实验 [{self.exp_name}] 的模型清单 (Top {limit})...")
-        # TODO: R.list_recorders(self.exp_name)
-        # print table...
-        logger.info("ID: 12345 | Test: 2023-01~02 | IC: 0.051 (模拟数据)")
-        logger.info("ID: 67890 | Test: 2023-02~03 | IC: 0.048 (模拟数据)")
-
     def best(self, window=3, metric="IC"):
         """获取当前表现最好的模型"""
         logger.info(f"正在根据最近 {window} 个周期的 {metric} 指标筛选最佳模型...")
@@ -75,12 +63,10 @@ class ModelCLI:
             if a == 'Default':
                 continue
             exp = R.get_exp(experiment_name=a)
-            print(f"Experiment: {a} {exp}")
+            print(f"Experiment: {a} ")
             for rid in exp.list_recorders():
                 rec = exp.get_recorder(recorder_id=rid)
                 if not rec.list_artifacts():
                     continue
-                os.environ["TQDM_DISABLE"] = "1"
-                print(rid, rec.get_artifact_uri())
-                # print(rec.load_object("task"))
-                print(rec.list_artifacts())
+                task = rec.load_object("task")
+                print("\t", rid, task["model"]['class'], task['dataset']['kwargs']['handler']['class'])
