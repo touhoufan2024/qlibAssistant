@@ -37,7 +37,7 @@ class TrainCLI:
         self.exp_name = exp_name
         self.step = step
         exp_manager = C["exp_manager"]
-        exp_manager["kwargs"]["uri"] = "file:" + str(Path(os.getcwd()).resolve() / uri_folder)
+        exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
         qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
         self.task_config = [CSI300_RECORD_LGB_TASK_CONFIG]
