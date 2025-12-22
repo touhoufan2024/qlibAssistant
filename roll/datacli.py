@@ -41,6 +41,7 @@ class DataCLI:
             logger.info(f"need updata data for Qlib...{self.url}")
         else:
             logger.info(f"no need updata data for Qlib...{self.url}")
+            self.status()
             return
 
         proxy_map = {

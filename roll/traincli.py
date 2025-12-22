@@ -31,7 +31,7 @@ class TrainCLI:
         region=REG_CN,
         provider_uri="~/.qlib/qlib_data/cn_data",
         experiment_name="rolling_exp",
-        uri_folder="mlruns",
+        uri_folder="~/.qlibAssistant/mlruns",
         **kwargs
     ):
         self.exp_name = exp_name
