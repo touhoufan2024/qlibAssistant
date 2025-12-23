@@ -44,16 +44,6 @@ class ModelCLI:
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
         qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
 
-    def best(self, window=3, metric="IC"):
-        """获取当前表现最好的模型"""
-        logger.info(f"正在根据最近 {window} 个周期的 {metric} 指标筛选最佳模型...")
-        # TODO: 计算 avg(metric)
-        best_rid = "abcde12345"
-        logger.success(f"推荐最佳模型 ID: <green>{best_rid}</green>")
-
-    def prune(self, keep=50):
-        """清理过期的旧模型文件"""
-        logger.warning(f"正在清理旧模型，仅保留最近 {keep} 个...")
 
     def ls(self):
         logger.info("Listing all model in the uri_folder:")
@@ -69,4 +59,5 @@ class ModelCLI:
                 if not rec.list_artifacts():
                     continue
                 task = rec.load_object("task")
+                pprint(rec.list_artifacts())
                 print("\t", rid, task["model"]['class'], task['dataset']['kwargs']['handler']['class'])

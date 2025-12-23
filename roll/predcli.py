@@ -1,5 +1,24 @@
 from loguru import logger
 import sys
+from loguru import logger
+import sys
+import qlib
+from qlib.constant import REG_CN
+from qlib.workflow import R
+from qlib.config import C
+from qlib.workflow.task.gen import RollingGen, task_generator
+from qlib.workflow.task.manage import TaskManager, run_task
+from qlib.workflow.task.collect import RecorderCollector
+from qlib.model.ens.group import RollingGroup
+from qlib.model.trainer import TrainerR, TrainerRM, task_train
+from pathlib import Path
+from myconfig import CSI300_RECORD_LGB_TASK_CONFIG, CSI100_RECORD_XGBOOST_TASK_CONFIG
+import os
+from tqdm import tqdm
+from functools import partialmethod
+# 强制禁用所有 tqdm 进度条
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+from pprint import pprint
 logger.remove()
 logger.add(
     sys.stderr,
@@ -10,8 +29,22 @@ class PredCLI:
     """
     [子模块] 实盘决策: 生成信号与诊断
     """
-    def __init__(self, exp_name, **kwargs):
+    def __init__(
+        self,
+        exp_name,
+        step = 40,
+        region=REG_CN,
+        provider_uri="~/.qlib/qlib_data/cn_data",
+        experiment_name="rolling_exp",
+        uri_folder="~/.qlibAssistant/mlruns",
+        **kwargs
+    ):
         self.exp_name = exp_name
+        self.step = step
+        exp_manager = C["exp_manager"]
+        exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
+        logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
+        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
 
     def today(self, top=50, out="buy_list.csv", filter_st=True):
         """
@@ -48,3 +81,7 @@ class PredCLI:
         """监控持仓股排名变化 (今日 vs 昨日)"""
         logger.info(f"正在对比股票 [{id}] 的排名变化...")
         logger.warning(f"[{id}] 排名大幅下降: 昨(Top 10) -> 今(Top 300) ! 建议核查")
+
+    def test(self):
+        """测试函数"""
+        logger.info("This is a test log from PredCLI.test()")
