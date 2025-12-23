@@ -45,14 +45,14 @@ class TrainCLI:
         self.rolling_gen = RollingGen(step=step, rtype=rolling_type)
         self.trainer = TrainerR(experiment_name=self.exp_name)
 
-    def init(self, model="LGB", step=20):
+    def init(self, model="LGB"):
         """
         [警告] 初始化并全量重新训练
         :param model: 模型配置文件名 (如 LGB, XGB)
         :param step: 滚动步长
         """
         logger.warning(f"!!! 准备重置实验 [{self.exp_name}] 并全量训练 !!!")
-        logger.info(f"模型配置: {model} | 滚动步长: {step}")
+        logger.info(f"模型配置: {model} | 滚动步长: {self.step}")
         # TODO: inst = RollingTaskExample(experiment_name=self.exp_name, ...)
         # TODO: inst.reset()
         # TODO: inst.run()

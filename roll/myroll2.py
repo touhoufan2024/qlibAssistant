@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
+import yaml
 import fire
+import os
 from loguru import logger
 import requests
 import subprocess
@@ -26,27 +28,44 @@ class RollingTrader:
     ================================================
     Qlib A股滚动交易指挥台 (RollingTrader)
     ================================================
-    
+        :param config_path: 配置文件路径 (yaml)
+        :param kwargs: 命令行传递的最高优先级参数
     使用方法:
       python myroll.py data update        # 更新数据
-      python myroll.py train update       # 增量训练
-      python myroll.py model ls           # 查看模型
-      python myroll.py pred today         # 生成买单
-      python myroll.py pred stock SH600519 # 个股诊断
     """
-    def __init__(self, exp_name="rolling_exp", region="cn", **kwargs):
-        self.exp_name = exp_name
-        self.region = region
+    def __init__(self, config_path=None, **kwargs):
+        # === 1. 定义默认参数 (底层兜底) ===
+        final_params = {
+            "exp_name": "rolling_exp",
+            "region": "cn",
+        }
+
+        # === 2. 加载配置文件 (如果有) ===
+        if config_path and os.path.exists(config_path):
+            print(f"Loading config from: {config_path}")
+            with open(config_path, 'r', encoding='utf-8') as f:
+                file_params = yaml.safe_load(f)
+                # 更新参数池
+                if file_params:
+                    final_params.update(file_params)
         
-        # 初始化 Qlib (建议Lazy Load，这里仅打印日志)
-        logger.info(f"初始化系统 | 实验名: {exp_name} | 地区: {region}")
+        # === 3. 合并命令行参数 (CLI 优先级最高，覆盖文件配置) ===
+        # kwargs 包含例如 python myroll.py --region="us" 这种通过命令行强制指定的
+        final_params.update(kwargs)
+
+        # === 4. 赋值给实例变量 ===
+        # 将合并后的字典变成对象的属性，方便 self.exp_name 调用
+        for k, v in final_params.items():
+            setattr(self, k, v)
+
+        print(f"最终参数配置: {final_params}")
 
         # 装载子命令
-        self.data = DataCLI(region, **kwargs)
-        self.train = TrainCLI(exp_name, **kwargs)
-        self.model = ModelCLI(exp_name, **kwargs)
-        self.pred = PredCLI(exp_name, **kwargs)
-        self.export = CollectCLI(exp_name, **kwargs)
+        self.data = DataCLI(**final_params)
+        self.train = TrainCLI(**final_params)
+        self.model = ModelCLI(**final_params)
+        self.pred = PredCLI(**final_params)
+        self.export = CollectCLI(**final_params)
 
 if __name__ == "__main__":
     # Fire 会自动解析类结构并生成 CLI
