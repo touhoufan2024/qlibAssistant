@@ -35,7 +35,7 @@ class RollingTrader:
     使用方法:
       python myroll.py data update        # 更新数据
     """
-    def __init__(self, config_path=None, **kwargs):
+    def __init__(self, config_path="./config.yaml", **kwargs):
         # === 1. 定义默认参数 (底层兜底) ===
         final_params = {
             "exp_name": "rolling_exp",
@@ -50,7 +50,9 @@ class RollingTrader:
                 # 更新参数池
                 if file_params:
                     final_params.update(file_params)
-        
+        else:
+            print(f"No config file found at: {config_path}, using defaults and CLI args only.")
+
         # === 3. 合并命令行参数 (CLI 优先级最高，覆盖文件配置) ===
         # kwargs 包含例如 python myroll.py --region="us" 这种通过命令行强制指定的
         final_params.update(kwargs)
@@ -62,12 +64,18 @@ class RollingTrader:
 
         print(f"最终参数配置: {final_params}")
 
+        self.final_params = final_params
+
         # 装载子命令
         self.data = DataCLI(**final_params)
         self.train = TrainCLI(**final_params)
         self.model = ModelCLI(**final_params)
         self.pred = PredCLI(**final_params)
         self.export = CollectCLI(**final_params)
+
+    def test(self):
+        logger.info(self.final_params)
+
 
 if __name__ == "__main__":
     # Fire 会自动解析类结构并生成 CLI
