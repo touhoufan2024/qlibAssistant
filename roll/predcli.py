@@ -91,7 +91,7 @@ class PredCLI:
         rid = "f4e011d0d4934706bea7b03936b377f7"
         exp = R.get_exp(experiment_name=exp_name)
 
-        target_stock = "SH689009"
+        target_stock = "SH601699"
 
         rec = exp.get_recorder(recorder_id=rid)
         task = rec.load_object("task")
@@ -102,9 +102,10 @@ class PredCLI:
         dataset_config = task['dataset']
         pprint(dataset_config)
 
-        predict_date1 = pd.Timestamp("2025-01-05")
-        predict_date2 = pd.Timestamp("2025-01-06")
+        predict_date1 = pd.Timestamp("2025-12-20")
+        predict_date2 = pd.Timestamp("2025-12-24")
         dataset_config['kwargs']['segments']['test'] = (predict_date1, predict_date2)
+        dataset_config['kwargs']['handler']['kwargs']['end_time'] = predict_date2
         dataset_config['kwargs']['handler']['kwargs']['instruments'] = [target_stock]
         pprint(dataset_config)
 
