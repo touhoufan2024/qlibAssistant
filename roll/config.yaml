@@ -21,5 +21,5 @@ predict_dates:
 
 # 模型过滤器, 支持正则表达式
 model_filter:
-  - .*LGBModel
-  - .*XGBModel
+  - testxx
+  - pm

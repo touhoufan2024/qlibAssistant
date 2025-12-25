@@ -5,6 +5,31 @@ import re
 
 import hashlib
 
+import re
+
+def check_match(strA, strB):
+    """
+    判断 strA 中是否存在符合正则表达式 strB 的内容
+    :param strA: 目标字符串
+    :param strB: 正则表达式 (Pattern)
+    :return: Boolean
+    """
+    # re.search 扫描整个字符串并返回第一个成功的匹配，如果没有匹配则返回 None
+    if re.search(strB, strA):
+        return True
+    else:
+        return False
+
+
+def check_match_in_list(strA, regex_list):
+    """
+    strA: 目标字符串
+    regex_list: 正则表达式列表 (原 strB)
+    返回: 如果 regex_list 中有任意一个正则能匹配到 strA，返回 True
+    """
+    # 只要有一个 pattern 能在 strA 中 search 到，就返回 True
+    return any(re.search(pattern, strA) for pattern in regex_list)
+
 def get_latest_url(base_url):
     response = requests.get(base_url, allow_redirects=True, timeout=(5, 10))
     response.raise_for_status()

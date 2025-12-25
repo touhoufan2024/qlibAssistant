@@ -1,4 +1,5 @@
 from loguru import logger
+from utils import check_match_in_list
 import numpy as np
 import sys
 import qlib
@@ -38,6 +39,7 @@ class ModelCLI:
         uri_folder="~/.qlibAssistant/mlruns",
         **kwargs
     ):
+        self.kwargs = kwargs
         self.exp_name = exp_name
         self.step = step
         exp_manager = C["exp_manager"]
@@ -45,6 +47,17 @@ class ModelCLI:
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
         qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
 
+    def filter(self):
+        f_list = self.kwargs['model_filter']
+
+        exps = R.list_experiments()
+        for a, b in exps.items():
+            if a == 'Default':
+                continue
+            if not check_match_in_list(a, f_list):
+                continue
+            exp = R.get_exp(experiment_name=a)
+            print(f"Experiment: {a} {exp.id}")
 
     def ls(self):
         logger.info("Listing all model in the uri_folder:")
