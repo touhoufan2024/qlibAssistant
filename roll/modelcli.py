@@ -24,6 +24,13 @@ logger.add(
     sys.stderr,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
 )
+from dataclasses import dataclass, field
+from typing import List
+
+@dataclass
+class ModelContext:
+    exp_name: str
+    rid: List[str] = field(default_factory=list)
 
 class ModelCLI:
     """
@@ -59,15 +66,15 @@ class ModelCLI:
             exp = R.get_exp(experiment_name=a)
             print(f"Experiment: {a} {exp.id}")
 
-    def ls(self):
-        logger.info("Listing all model in the uri_folder:")
+    def get_model_list(self):
+        logger.info("get all model in the uri_folder:")
         exps = R.list_experiments()
-
+        ret = []
         for a, b in exps.items():
             if a == 'Default':
                 continue
+            mc =  ModelContext(a) 
             exp = R.get_exp(experiment_name=a)
-            print(f"Experiment: {a} {exp.id}")
             for rid in exp.list_recorders():
                 rec = exp.get_recorder(recorder_id=rid)
                 if not rec.list_artifacts():
@@ -75,22 +82,36 @@ class ModelCLI:
                 lista = rec.list_artifacts()
                 if "params.pkl" not in lista or "sig_analysis" not in lista:
                     continue
-                task = rec.load_object("task")
-                # print(lista)
-                ic = rec.load_object("sig_analysis/ic.pkl")
-                ric = rec.load_object("sig_analysis/ric.pkl")
-                IC = ic.mean()
-                ICIR = ic.mean() / ic.std()
-                RankIC = ric.mean()
-                RankICIR = ric.mean() / ric.std()
+                mc.rid.append(rid)
+            ret.append(mc)
+        return ret
 
-                ic_info = {
-                    "IC": float(np.around(IC, 3)),
-                    "ICIR": float(np.around(ICIR, 3)),
-                    "Rank IC": float(np.around(RankIC, 3)),
-                    "Rank ICIR": float(np.around(RankICIR, 3)),
-                }
-                # params = rec.load_object("params.pkl")
+    def get_ic_info(self, rec):
+        ic = rec.load_object("sig_analysis/ic.pkl")
+        ric = rec.load_object("sig_analysis/ric.pkl")
+        IC = ic.mean()
+        ICIR = ic.mean() / ic.std()
+        RankIC = ric.mean()
+        RankICIR = ric.mean() / ric.std()
+
+        ic_info = {
+            "IC": float(np.around(IC, 3)),
+            "ICIR": float(np.around(ICIR, 3)),
+            "Rank IC": float(np.around(RankIC, 3)),
+            "Rank ICIR": float(np.around(RankICIR, 3)),
+        }
+        return ic_info
+
+    def ls(self):
+        logger.info("Listing all model in the uri_folder:")
+        model_list = self.get_model_list()
+        for mc in model_list:
+            exp = R.get_exp(experiment_name=mc.exp_name)
+            print(f"Experiment: {exp.name} {exp.id}")
+            for rid in mc.rid:
+                rec = exp.get_recorder(recorder_id=rid)
+                task = rec.load_object("task")
+                ic_info = self.get_ic_info(rec)
                 data_train = task['dataset']['kwargs']['segments']['train']
                 data_train_vec = [data_train[0].strftime("%Y-%m-%d"), data_train[1].strftime("%Y-%m-%d")]
                 print("\t", rid, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec)
