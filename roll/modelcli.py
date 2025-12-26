@@ -28,6 +28,7 @@ logger.add(
 )
 from dataclasses import dataclass, field
 from typing import List
+import logging
 
 @dataclass
 class ModelContext:
@@ -54,7 +55,7 @@ class ModelCLI:
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
-        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
+        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager, logging_level=logging.WARNING)
 
     def filter(self):
         f_list = self.kwargs['model_filter']
@@ -104,6 +105,14 @@ class ModelCLI:
         }
         return ic_info
 
+    def print_rec(self, rec):
+        task = rec.load_object("task")
+        ic_info = self.get_ic_info(rec)
+        data_train = task['dataset']['kwargs']['segments']['train']
+        data_train_vec = [data_train[0].strftime("%Y-%m-%d"), data_train[1].strftime("%Y-%m-%d")]
+        print("\t", rec.id, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec)
+
+
     def ls(self):
         logger.info("Listing all model in the uri_folder:")
         model_list = self.get_model_list()
@@ -112,11 +121,7 @@ class ModelCLI:
             print(f"Experiment: {exp.name} {exp.id}")
             for rid in mc.rid:
                 rec = exp.get_recorder(recorder_id=rid)
-                task = rec.load_object("task")
-                ic_info = self.get_ic_info(rec)
-                data_train = task['dataset']['kwargs']['segments']['train']
-                data_train_vec = [data_train[0].strftime("%Y-%m-%d"), data_train[1].strftime("%Y-%m-%d")]
-                print("\t", rid, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec)
+                self.print_rec(rec)
 
     def test(self):
         """测试函数"""
@@ -161,7 +166,37 @@ class ModelCLI:
         """
         logger.info("This is a placeholder for the inquiry method.")
         stock_list = self.kwargs['stock_list']
-        logger.info(f"Analyzing scores for stocks: {stock_list}")
+        logger.info(f"股票列表: {stock_list}")
+
+        model_list = self.get_model_list()
+        for mc in model_list:
+            exp = R.get_exp(experiment_name=mc.exp_name)
+            print(f"Experiment: {exp.name} {exp.id}")
+            for rid in mc.rid:
+                rec = exp.get_recorder(recorder_id=rid)
+                task = rec.load_object("task")
+
+                model = rec.load_object("params.pkl")
+                logger.info(f"模型加载成功:{rec.id}")
+                self.print_rec(rec)
+                # print(rec.load_object("task"))
+                dataset_config = task['dataset']
+                # pprint(dataset_config)
+
+                predict_date1 = pd.Timestamp("2025-12-20")
+                predict_date2 = pd.Timestamp("2025-12-24")
+                dataset_config['kwargs']['segments']['test'] = (predict_date1, predict_date2)
+                dataset_config['kwargs']['handler']['kwargs']['end_time'] = predict_date2
+                dataset_config['kwargs']['handler']['kwargs']['instruments'] = stock_list
+                # pprint(dataset_config)
+
+                dataset = init_instance_by_config(dataset_config)
+
+                logger.info("数据集加载成功")
+                # example_df = dataset.prepare("test")
+                # print(example_df.head())
+                pred_score = model.predict(dataset, segment="test")
+                pprint(pred_score)
 
     def selection(self):
         """
