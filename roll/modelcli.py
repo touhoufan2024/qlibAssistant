@@ -160,12 +160,11 @@ class ModelCLI:
         pprint(pred_score)
 
 
-    def inquiry(self):
+    def anilysis(self, stock_list = None):
         """
-        问股, 分析股票列表的 score
+        模型分析, 问股或者选股
         """
-        logger.info("This is a placeholder for the inquiry method.")
-        stock_list = self.kwargs['stock_list']
+        logger.info("This is a placeholder for the analysis method.")
         logger.info(f"股票列表: {stock_list}")
 
         model_list = self.get_model_list()
@@ -187,7 +186,8 @@ class ModelCLI:
                 predict_date2 = pd.Timestamp("2025-12-24")
                 dataset_config['kwargs']['segments']['test'] = (predict_date1, predict_date2)
                 dataset_config['kwargs']['handler']['kwargs']['end_time'] = predict_date2
-                dataset_config['kwargs']['handler']['kwargs']['instruments'] = stock_list
+                if stock_list is not None:
+                    dataset_config['kwargs']['handler']['kwargs']['instruments'] = stock_list
                 # pprint(dataset_config)
 
                 dataset = init_instance_by_config(dataset_config)
@@ -198,9 +198,17 @@ class ModelCLI:
                 pred_score = model.predict(dataset, segment="test")
                 pprint(pred_score)
 
+    def inquiry(self):
+        """
+        问股, 分析股票列表的 score
+        """
+        logger.info("This is a placeholder for the inquiry method.")
+        stock_list = self.kwargs['stock_list']
+        self.anilysis(stock_list=stock_list)
+
     def selection(self):
         """
         选股, 分析csi300成分股的 score
         """
         logger.info("This is a placeholder for the selection method.")
-        pass
+        self.anilysis(stock_list=None)
