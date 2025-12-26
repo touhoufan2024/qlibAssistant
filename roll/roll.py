@@ -12,7 +12,6 @@ from utils import run_command
 from datacli import DataCLI
 from traincli import TrainCLI
 from modelcli import ModelCLI
-from collectcli import CollectCLI
 # 假设这是你原本的 RollingTask 类 (保留引用以便调用)
 # from original_rolling import RollingTaskExample 
 
@@ -69,7 +68,6 @@ class RollingTrader:
         self.data = DataCLI(**final_params)
         self.train = TrainCLI(**final_params)
         self.model = ModelCLI(**final_params)
-        self.export = CollectCLI(**final_params)
 
     def test(self):
         logger.info(self.final_params)
