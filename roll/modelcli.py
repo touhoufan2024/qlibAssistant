@@ -1,6 +1,7 @@
 from loguru import logger
 from utils import check_match_in_list
 import numpy as np
+import pandas as pd
 import sys
 import qlib
 from qlib.constant import REG_CN
@@ -13,6 +14,7 @@ from qlib.model.ens.group import RollingGroup
 from qlib.model.trainer import TrainerR, TrainerRM, task_train
 from pathlib import Path
 from myconfig import CSI300_RECORD_LGB_TASK_CONFIG, CSI100_RECORD_XGBOOST_TASK_CONFIG
+from qlib.utils import init_instance_by_config
 import os
 from tqdm import tqdm
 from functools import partialmethod
@@ -115,3 +117,55 @@ class ModelCLI:
                 data_train = task['dataset']['kwargs']['segments']['train']
                 data_train_vec = [data_train[0].strftime("%Y-%m-%d"), data_train[1].strftime("%Y-%m-%d")]
                 print("\t", rid, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec)
+
+    def test(self):
+        """测试函数"""
+        logger.info("This is a test log from PredCLI.test()")
+        exp_name = "test1222pm"
+        rid = "f4e011d0d4934706bea7b03936b377f7"
+        exp = R.get_exp(experiment_name=exp_name)
+
+        target_stock = "SH601699"
+
+        rec = exp.get_recorder(recorder_id=rid)
+        task = rec.load_object("task")
+
+        model = rec.load_object("params.pkl")
+        logger.info("模型加载成功:", model)
+
+        dataset_config = task['dataset']
+        pprint(dataset_config)
+
+        predict_date1 = pd.Timestamp("2025-12-20")
+        predict_date2 = pd.Timestamp("2025-12-24")
+        dataset_config['kwargs']['segments']['test'] = (predict_date1, predict_date2)
+        dataset_config['kwargs']['handler']['kwargs']['end_time'] = predict_date2
+        dataset_config['kwargs']['handler']['kwargs']['instruments'] = [target_stock]
+        pprint(dataset_config)
+
+        dataset = init_instance_by_config(dataset_config)
+
+        logger.info("数据集加载成功")
+
+        example_df = dataset.prepare("test")
+        print(example_df.head())
+
+        pred_score = model.predict(dataset, segment="test")
+
+        pprint(pred_score)
+
+
+    def inquiry(self):
+        """
+        问股, 分析股票列表的 score
+        """
+        logger.info("This is a placeholder for the inquiry method.")
+        stock_list = self.kwargs['stock_list']
+        logger.info(f"Analyzing scores for stocks: {stock_list}")
+
+    def selection(self):
+        """
+        选股, 分析csi300成分股的 score
+        """
+        logger.info("This is a placeholder for the selection method.")
+        pass
