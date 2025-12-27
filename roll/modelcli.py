@@ -105,12 +105,20 @@ class ModelCLI:
         }
         return ic_info
 
+    def get_train_time(self, rec):
+        task = rec.load_object("task")
+        start_time = rec.info['start_time'].split()[0]
+        end_time = rec.info['end_time'].split()[0]
+        data_train = task['dataset']['kwargs']['segments']['train']
+        data_train_vec = [data_train[0].strftime("%Y-%m-%d"), data_train[1].strftime("%Y-%m-%d")]
+        train_time_vec = [start_time, end_time]
+        return data_train_vec, train_time_vec
+
     def print_rec(self, rec):
         task = rec.load_object("task")
         ic_info = self.get_ic_info(rec)
-        data_train = task['dataset']['kwargs']['segments']['train']
-        data_train_vec = [data_train[0].strftime("%Y-%m-%d"), data_train[1].strftime("%Y-%m-%d")]
-        print("\t", rec.id, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec)
+        data_train_vec, train_time_vec = self.get_train_time(rec)
+        print("\t", rec.id, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec, train_time_vec)
 
 
     def ls(self):
