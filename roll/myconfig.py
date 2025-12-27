@@ -52,7 +52,7 @@ RECORD_CONFIG = [
 
 def get_data_handler_config(
     start_time="2008-01-01",
-    end_time="2020-08-01",
+    end_time="2026-08-01",
     fit_start_time="<dataset.kwargs.segments.train.0>",
     fit_end_time="<dataset.kwargs.segments.train.1>",
     instruments=CSI300_MARKET,
