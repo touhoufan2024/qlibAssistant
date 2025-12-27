@@ -71,10 +71,13 @@ class ModelCLI:
 
     def get_model_list(self):
         logger.info("get all model in the uri_folder:")
+        f_list = self.kwargs['model_filter']
         exps = R.list_experiments()
         ret = []
         for a, b in exps.items():
             if a == 'Default':
+                continue
+            if not check_match_in_list(a, f_list):
                 continue
             mc =  ModelContext(a) 
             exp = R.get_exp(experiment_name=a)
