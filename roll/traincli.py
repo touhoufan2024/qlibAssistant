@@ -43,14 +43,12 @@ class TrainCLI:
         self.task_config = [CSI300_RECORD_LGB_TASK_CONFIG]
         rolling_type=RollingGen.ROLL_EX,
         self.rolling_gen = RollingGen(step=step, rtype=rolling_type)
-        self.trainer = TrainerR(experiment_name=self.exp_name)
 
     def start(self):
         """开始自动滚动训练"""
         logger.info(f"启动滚动训练... step={self.step}")
         tasks = self.gen()
         self.task_training(tasks)
-        self.task_collecting()
 
     def gen(self):
         print("========== task_generating ==========")
@@ -63,6 +61,13 @@ class TrainCLI:
 
     def task_training(self, tasks):
         print("========== task_training ==========")
+        task = tasks[0]
+        model_class = task["model"]["class"]
+        data_set = task["dataset"]["kwargs"]["handler"]["class"]
+
+        exp_name = model_class + "_" + data_set
+        print(f"Experiment name: {exp_name}")
+        self.trainer = TrainerR(experiment_name=exp_name)
         self.trainer.train(tasks)
 
     def task_collecting(self):
