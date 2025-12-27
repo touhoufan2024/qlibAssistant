@@ -41,17 +41,12 @@ class ModelCLI:
     """
     def __init__(
         self,
-        exp_name,
-        step = 40,
         region=REG_CN,
         provider_uri="~/.qlib/qlib_data/cn_data",
-        experiment_name="rolling_exp",
         uri_folder="~/.qlibAssistant/mlruns",
         **kwargs
     ):
         self.kwargs = kwargs
-        self.exp_name = exp_name
-        self.step = step
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
