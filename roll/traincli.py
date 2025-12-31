@@ -14,6 +14,7 @@ from pathlib import Path
 from myconfig import CSI300_RECORD_LGB_TASK_CONFIG, CSI100_RECORD_XGBOOST_TASK_CONFIG
 import os
 from pprint import pprint
+import datetime
 logger.remove()
 logger.add(
     sys.stderr,
@@ -65,7 +66,10 @@ class TrainCLI:
         model_class = task["model"]["class"]
         data_set = task["dataset"]["kwargs"]["handler"]["class"]
 
-        exp_name = model_class + "_" + data_set
+        now = datetime.datetime.now()
+        time_str = now.strftime("%Y%m%d_%H")
+
+        exp_name = model_class + "_" + data_set + "_" + time_str
         print(f"Experiment name: {exp_name}")
         self.trainer = TrainerR(experiment_name=exp_name)
         self.trainer.train(tasks)
