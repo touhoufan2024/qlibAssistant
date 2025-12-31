@@ -13,6 +13,9 @@ DATASET_ALPHA360_CLASS = "Alpha360"
 # config
 ###################################
 
+# Supported Models:
+model_list = ["CatBoost", "KRNN","Sandwich","Linear","XGBoost","TFT","DoubleEnsemble","LightGBM"]
+
 
 GBDT_MODEL = {
     "class": "LGBModel",
@@ -95,6 +98,7 @@ def get_gbdt_task(dataset_kwargs={}, handler_kwargs={"instruments": CSI300_MARKE
     return {
         "model": GBDT_MODEL,
         "dataset": get_dataset_config(**dataset_kwargs, handler_kwargs=handler_kwargs),
+        "record": RECORD_CONFIG,
     }
 
 
@@ -147,22 +151,3 @@ CSI100_RECORD_LGB_TASK_CONFIG_ROLLING = get_record_lgb_config(
     dataset_kwargs=ROLLING_DATASET_CONFIG, handler_kwargs=ROLLING_HANDLER_CONFIG
 )
 
-# use for online_management_simulate.py
-ONLINE_HANDLER_CONFIG = {
-    "start_time": "2018-01-01",
-    "end_time": "2018-10-31",
-    "fit_start_time": "2018-01-01",
-    "fit_end_time": "2018-03-31",
-    "instruments": CSI100_MARKET,
-}
-ONLINE_DATASET_CONFIG = {
-    "train": ("2018-01-01", "2018-03-31"),
-    "valid": ("2018-04-01", "2018-05-31"),
-    "test": ("2018-06-01", "2018-09-10"),
-}
-CSI100_RECORD_XGBOOST_TASK_CONFIG_ONLINE = get_record_xgboost_config(
-    dataset_kwargs=ONLINE_DATASET_CONFIG, handler_kwargs=ONLINE_HANDLER_CONFIG
-)
-CSI100_RECORD_LGB_TASK_CONFIG_ONLINE = get_record_lgb_config(
-    dataset_kwargs=ONLINE_DATASET_CONFIG, handler_kwargs=ONLINE_HANDLER_CONFIG
-)
