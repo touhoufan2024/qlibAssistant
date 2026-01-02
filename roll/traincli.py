@@ -11,7 +11,7 @@ from qlib.workflow.task.collect import RecorderCollector
 from qlib.model.ens.group import RollingGroup
 from qlib.model.trainer import TrainerR, TrainerRM, task_train
 from pathlib import Path
-from myconfig import CSI300_RECORD_LGB_TASK_CONFIG, CSI100_RECORD_XGBOOST_TASK_CONFIG
+from myconfig import get_my_config
 import os
 from pprint import pprint
 import datetime
@@ -42,7 +42,10 @@ class TrainCLI:
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
         qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
-        self.task_config = [CSI300_RECORD_LGB_TASK_CONFIG]
+        model_name = kwargs["model_name"]
+        dataset_name = kwargs["dataset_name"]
+        stock_pool = kwargs["stock_pool"]
+        self.task_config = get_my_config(model_name, dataset_name, stock_pool)
         rolling_type=RollingGen.ROLL_EX,
         self.rolling_gen = RollingGen(step=step, rtype=rolling_type)
 
@@ -72,8 +75,9 @@ class TrainCLI:
 
         pfx_name = self.kwargs['pfx_name']
         sfx_name = self.kwargs['sfx_name']
+        stock_pool =  task["dataset"]['kwargs']['handler']['kwargs']['instruments']
 
-        exp_name = pfx_name + "_" + model_class + "_" + data_set + "_" + sfx_name + "_" + time_str
+        exp_name = pfx_name + "_" + model_class + "_" + data_set + "_" + stock_pool + "_" + sfx_name + "_" + time_str
         print(f"Experiment name: {exp_name}")
         self.trainer = TrainerR(experiment_name=exp_name)
         self.trainer.train(tasks)

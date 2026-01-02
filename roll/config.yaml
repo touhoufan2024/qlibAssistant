@@ -11,6 +11,10 @@ task_list:
 pfx_name: p
 sfx_name: s
 
+model_name: Linear
+dataset_name: Alpha158
+stock_pool: csi300
+
 # 限定股票列表
 stock_list:
   - SH601699

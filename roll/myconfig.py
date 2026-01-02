@@ -261,6 +261,18 @@ CSI300_RECORD_LGB_TASK_CONFIG = get_record_lgb_config(handler_kwargs={"instrumen
 
 def get_model_config(model_name: str):
     match model_name:
+        case "XGBoost":
+            return XGBOOST_MODEL
+        case "CatBoost":
+            return CATBOOST_MODEL
+        case "KRNN":
+            return KRNN_MODEL
+        case "Sandwich":
+            return SANDWICH_MODEL
+        case "Linear":
+            return LINEAR_MODEL
+        case "DoubleEnsemble":
+            return DOUBLE_ENSEMBLE_MODEL
         case "LightGBM":
             return GBDT_MODEL
         case _:
