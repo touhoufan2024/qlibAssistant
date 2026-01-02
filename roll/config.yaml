@@ -8,6 +8,9 @@ task_list:
   - my_taskB
   - my_taskC
 
+pfx_name: p
+sfx_name: s
+
 # 限定股票列表
 stock_list:
   - SH601699

@@ -37,6 +37,7 @@ class TrainCLI:
     ):
         self.exp_name = exp_name
         self.step = step
+        self.kwargs = kwargs
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
@@ -69,7 +70,10 @@ class TrainCLI:
         now = datetime.datetime.now()
         time_str = now.strftime("%Y%m%d_%H")
 
-        exp_name = model_class + "_" + data_set + "_" + time_str
+        pfx_name = self.kwargs['pfx_name']
+        sfx_name = self.kwargs['sfx_name']
+
+        exp_name = pfx_name + "_" + model_class + "_" + data_set + "_" + sfx_name + "_" + time_str
         print(f"Experiment name: {exp_name}")
         self.trainer = TrainerR(experiment_name=exp_name)
         self.trainer.train(tasks)
