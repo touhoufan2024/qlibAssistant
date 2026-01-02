@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # -*- coding: utf-8 -*-
+from pprint import pprint
 import sys
 import yaml
 import fire
@@ -12,6 +13,7 @@ from utils import run_command
 from datacli import DataCLI
 from traincli import TrainCLI
 from modelcli import ModelCLI
+from myconfig import get_my_config
 # 假设这是你原本的 RollingTask 类 (保留引用以便调用)
 # from original_rolling import RollingTaskExample 
 
@@ -71,6 +73,12 @@ class RollingTrader:
 
     def test(self):
         logger.info(self.final_params)
+        cfg = get_my_config(
+            model_name="LightGBM",
+            dataset_name="Alpha158",
+            stock_pool="csi300"
+        )
+        pprint(cfg)
 
 
 if __name__ == "__main__":

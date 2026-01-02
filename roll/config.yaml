@@ -21,6 +21,6 @@ predict_dates:
 
 # 模型过滤器, 支持正则表达式
 model_filter:
-  - "158"
+  # - "158"
   # - testxx
-  # - pm
+  - .*
