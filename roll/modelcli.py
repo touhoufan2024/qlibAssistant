@@ -50,7 +50,7 @@ class ModelCLI:
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
-        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager, logging_level=logging.WARNING)
+        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager) #, logging_level=logging.WARNING)
 
     def filter(self):
         f_list = self.kwargs['model_filter']
@@ -119,15 +119,17 @@ class ModelCLI:
         print("\t", rec.id, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec, train_time_vec)
 
 
-    def ls(self):
+    def ls(self, all=False):
         logger.info("Listing all model in the uri_folder:")
         model_list = self.get_model_list()
         for mc in model_list:
             exp = R.get_exp(experiment_name=mc.exp_name)
-            print(f"Experiment: {exp.name} {exp.id}")
-            for rid in mc.rid:
-                rec = exp.get_recorder(recorder_id=rid)
-                self.print_rec(rec)
+            count = len(exp.list_recorders())
+            print(f"Experiment: {exp.name} {exp.id} (Recorders: {count})")
+            if all:
+                for rid in mc.rid:
+                    rec = exp.get_recorder(recorder_id=rid)
+                    self.print_rec(rec)
 
     def test(self):
         """测试函数"""
