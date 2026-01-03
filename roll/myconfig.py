@@ -181,8 +181,8 @@ RECORD_CONFIG = [
 
 
 def get_data_handler_config(
-    start_time="2008-01-01",
-    end_time="2026-08-01",
+    start_time="2014-01-01",
+    end_time="2066-08-01",
     fit_start_time="<dataset.kwargs.segments.train.0>",
     fit_end_time="<dataset.kwargs.segments.train.1>",
     instruments=CSI300_MARKET,
@@ -198,9 +198,9 @@ def get_data_handler_config(
 
 def get_dataset_config(
     dataset_class=DATASET_ALPHA158_CLASS,
-    train=("2010-01-01", "2019-12-31"),
-    valid=("2020-01-01", "2021-12-31"),
-    test=("2022-01-01", "2025-12-10"),
+    train=("2015-01-01", "2016-12-31"),
+    valid=("2017-01-01", "2017-02-28"),
+    test=("2017-03-01", "2026-12-31"),
     handler_kwargs={"instruments": CSI300_MARKET},
 ):
     return {
