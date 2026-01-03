@@ -1,12 +1,11 @@
 # 该文件可被命令行输入覆盖
 
 # 实验相关配置
-exp_name: test1222pm
-step: 400
-task_list:
-  - my_taskA
-  - my_taskB
-  - my_taskC
+# exp_name: test1222pm
+# task_list:
+#   - my_taskA
+#   - my_taskB
+#   - my_taskC
 
 pfx_name: p
 sfx_name: s
@@ -14,6 +13,10 @@ sfx_name: s
 model_name: Linear
 dataset_name: Alpha158
 stock_pool: csi300
+step: 40
+
+# rolling_type:sliding
+rolling_type: expanding
 
 # 限定股票列表
 stock_list:
@@ -22,9 +25,9 @@ stock_list:
   # - my_test_stockA
 
 # 预测日期区间, 替代 test segment
-predict_dates:
-  - start: 2025-12-20
-    end: 2025-12-24
+# predict_dates:
+#   - start: 2025-12-20
+#     end: 2025-12-24
 
 # 模型过滤器, 支持正则表达式
 model_filter:
