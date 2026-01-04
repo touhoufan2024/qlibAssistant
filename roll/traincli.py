@@ -77,9 +77,10 @@ class TrainCLI:
         sfx_name = self.kwargs['sfx_name']
         stock_pool =  task["dataset"]['kwargs']['handler']['kwargs']['instruments']
         step = self.step
+        rolling_type = self.kwargs["rolling_type"]
 
         # exp_name = pfx_name + "_" + model_class + "_" + data_set + "_" + stock_pool + "_" + sfx_name + "_" + time_str
-        exp_name = f"{pfx_name}_{model_class}_{data_set}_{stock_pool}_step{step}_{sfx_name}_{time_str}"
+        exp_name = f"{pfx_name}_{model_class}_{data_set}_{stock_pool}_{rolling_type}_step{step}_{sfx_name}_{time_str}"
         print(f"Experiment name: {exp_name}")
         # self.trainer = TrainerR(experiment_name=exp_name)
         # self.trainer.train(tasks)
