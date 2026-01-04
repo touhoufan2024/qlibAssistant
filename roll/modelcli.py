@@ -140,7 +140,7 @@ class ModelCLI:
         for mc in model_list:
             exp = R.get_exp(experiment_name=mc.exp_name)
             count = len(mc.rid)
-            print(f"Experiment: {exp.name} {exp.id} (Recorders: {count})")
+            print(f"Experiment: {exp.name} {exp.id} (Recorders: {count}/{len(exp.list_recorders())})")
             if all:
                 for rid in mc.rid:
                     rec = exp.get_recorder(recorder_id=rid)

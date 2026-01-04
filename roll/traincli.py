@@ -103,7 +103,6 @@ class TrainCLI:
         # exp_name = pfx_name + "_" + model_class + "_" + data_set + "_" + stock_pool + "_" + sfx_name + "_" + time_str
         exp_name = f"{pfx_name}_{model_class}_{data_set}_{stock_pool}_{rolling_type}_step{step}_{sfx_name}_{time_str}"
         print(f"Experiment name: {exp_name}")
-        self.trainer = TrainerR(experiment_name=exp_name)
 
 
         ## 断点续训功能
@@ -113,6 +112,7 @@ class TrainCLI:
                 exp_name = name
 
         logger.info(f"Using experiment name: {exp_name}")
+        self.trainer = TrainerR(experiment_name=exp_name)
 
         exp = R.get_exp(experiment_name=exp_name)
         exp_train_time_segs_list = []
