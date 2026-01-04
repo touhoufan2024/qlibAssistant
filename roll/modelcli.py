@@ -19,7 +19,7 @@ import os
 from tqdm import tqdm
 from functools import partialmethod
 # 强制禁用所有 tqdm 进度条
-tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+# tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 from pprint import pprint
 logger.remove()
 logger.add(
