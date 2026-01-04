@@ -21,6 +21,27 @@ logger.add(
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
 )
 
+from tqdm import tqdm
+from functools import partialmethod
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
+from qlib.workflow.task.gen import handler_mod as default_handler_mod
+
+def my_enhanced_handler_mod(task, rg):
+    # 1. 先调用官方自带的逻辑，帮你处理 end_time 不够长的问题
+    default_handler_mod(task, rg)
+    
+    # 2. 再加上你自己的逻辑，修复 fit_start_time 的占位符问题
+    # 获取当前滚动后的 train 时间段
+    train_start, train_end = task["dataset"]["kwargs"]["segments"]["train"]
+    
+    # 获取 handler 配置
+    h_kwargs = task["dataset"]["kwargs"]["handler"]["kwargs"]
+    
+    # 强制覆盖为真实日期
+    h_kwargs["fit_start_time"] = train_start
+    h_kwargs["fit_end_time"] = train_end
+
 class TrainCLI:
     """
     [子模块] 训练引擎: 负责滚动训练 (Rolling)
@@ -41,13 +62,13 @@ class TrainCLI:
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
-        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
+        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager, n_jobs = 8)
         model_name = kwargs["model_name"]
         dataset_name = kwargs["dataset_name"]
         stock_pool = kwargs["stock_pool"]
         self.task_config = get_my_config(model_name, dataset_name, stock_pool)
         rolling_type = kwargs["rolling_type"]
-        self.rolling_gen = RollingGen(step=step, rtype=rolling_type)
+        self.rolling_gen = RollingGen(step=step, rtype=rolling_type, ds_extra_mod_func=my_enhanced_handler_mod)
 
     def start(self):
         """开始自动滚动训练"""
@@ -82,8 +103,44 @@ class TrainCLI:
         # exp_name = pfx_name + "_" + model_class + "_" + data_set + "_" + stock_pool + "_" + sfx_name + "_" + time_str
         exp_name = f"{pfx_name}_{model_class}_{data_set}_{stock_pool}_{rolling_type}_step{step}_{sfx_name}_{time_str}"
         print(f"Experiment name: {exp_name}")
-        # self.trainer = TrainerR(experiment_name=exp_name)
-        # self.trainer.train(tasks)
+        self.trainer = TrainerR(experiment_name=exp_name)
+
+
+        ## 断点续训功能
+        exps = R.list_experiments()
+        for name in exps:
+            if name.rsplit('_', 2)[0] == exp_name.rsplit('_', 2)[0]:
+                exp_name = name
+
+        logger.info(f"Using experiment name: {exp_name}")
+
+        exp = R.get_exp(experiment_name=exp_name)
+        exp_train_time_segs_list = []
+        for rid in exp.list_recorders():
+            rec = exp.get_recorder(recorder_id=rid)
+            if not rec.list_artifacts():
+                continue
+            lista = rec.list_artifacts()
+            if "params.pkl" not in lista or "sig_analysis" not in lista:
+                continue
+            
+            task = rec.load_object("task")
+            train_time_seg = task["dataset"]["kwargs"]["segments"]["train"]
+            exp_train_time_segs_list.append(train_time_seg)
+
+        print(f"Already trained time segments in experiment: {len(exp_train_time_segs_list)}")
+        
+        for idx, task in enumerate(tasks):
+            logger.info(f"----- Training task {idx + 1}/{len(tasks)} -----")
+            train_time_seg = task["dataset"]["kwargs"]["segments"]["train"]
+            print(f"Train time segment: {train_time_seg}")
+            # print(task)
+
+            if train_time_seg in exp_train_time_segs_list:
+                logger.info(f"Skipping training for segment {train_time_seg} as it already exists in the experiment.")
+                continue
+            
+            self.trainer.train(task)
 
     def task_collecting(self):
         print("========== task_collecting ==========")

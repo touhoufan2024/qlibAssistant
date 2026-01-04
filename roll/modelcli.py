@@ -50,7 +50,7 @@ class ModelCLI:
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
-        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager) #, logging_level=logging.WARNING)
+        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager, n_jobs = 8) 
 
     def filter(self):
         f_list = self.kwargs['model_filter']
@@ -130,9 +130,11 @@ class ModelCLI:
         ic_info, ic_list = self.get_ic_info(rec)
         data_train_vec, train_time_vec = self.get_train_time(rec)
         print("\t", rec.id, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec, train_time_vec)
+        print(task)
 
 
     def ls(self, all=False):
+        tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
         logger.info("Listing all model in the uri_folder:")
         model_list = self.get_model_list()
         for mc in model_list:

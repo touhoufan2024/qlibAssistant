@@ -180,11 +180,28 @@ RECORD_CONFIG = [
 ]
 
 
+# def get_data_handler_config(
+#     start_time="2014-01-01",
+#     end_time="2066-08-01",
+#     fit_start_time="<dataset.kwargs.segments.train.0>",
+#     fit_end_time="<dataset.kwargs.segments.train.1>",
+#     instruments=CSI300_MARKET,
+# ):
+#     return {
+#         "start_time": start_time,
+#         "end_time": end_time,
+#         "fit_start_time": fit_start_time,
+#         "fit_end_time": fit_end_time,
+#         "instruments": instruments,
+#     }
+
+
+
 def get_data_handler_config(
     start_time="2014-01-01",
     end_time="2066-08-01",
-    fit_start_time="<dataset.kwargs.segments.train.0>",
-    fit_end_time="<dataset.kwargs.segments.train.1>",
+    fit_start_time=None, 
+    fit_end_time=None,
     instruments=CSI300_MARKET,
 ):
     return {
@@ -195,14 +212,54 @@ def get_data_handler_config(
         "instruments": instruments,
     }
 
+# def get_dataset_config(
+#     dataset_class=DATASET_ALPHA158_CLASS,
+#     train=("2015-01-01", "2016-12-31"),
+#     valid=("2017-01-01", "2017-02-28"),
+#     test=("2017-03-01", "2026-12-31"),
+#     handler_kwargs={"instruments": CSI300_MARKET},
+# ):
+#     return {
+#         "class": "DatasetH",
+#         "module_path": "qlib.data.dataset",
+#         "kwargs": {
+#             "handler": {
+#                 "class": dataset_class,
+#                 "module_path": "qlib.contrib.data.handler",
+#                 "kwargs": get_data_handler_config(**handler_kwargs),
+#             },
+#             "segments": {
+#                 "train": train,
+#                 "valid": valid,
+#                 "test": test,
+#             },
+#         },
+#     }
 
 def get_dataset_config(
     dataset_class=DATASET_ALPHA158_CLASS,
     train=("2015-01-01", "2016-12-31"),
     valid=("2017-01-01", "2017-02-28"),
     test=("2017-03-01", "2026-12-31"),
-    handler_kwargs={"instruments": CSI300_MARKET},
+    handler_kwargs=None,  # 建议默认值设为 None，避免可变参数陷阱
 ):
+    # 1. 如果没传 handler_kwargs，给个默认字典
+    if handler_kwargs is None:
+        handler_kwargs = {"instruments": CSI300_MARKET}
+    
+    # 为了不修改外部传入的字典，建议 copy 一份
+    kwargs = handler_kwargs.copy()
+
+    # ================= 关键修改 =================
+    # 手动把 train 的时间填进去，替换掉那个 "<...>" 占位符
+    # train[0] 就是开始时间，train[1] 就是结束时间
+    if "fit_start_time" not in kwargs:
+        kwargs["fit_start_time"] = train[0]
+    
+    if "fit_end_time" not in kwargs:
+        kwargs["fit_end_time"] = train[1]
+    # ===========================================
+
     return {
         "class": "DatasetH",
         "module_path": "qlib.data.dataset",
@@ -210,7 +267,7 @@ def get_dataset_config(
             "handler": {
                 "class": dataset_class,
                 "module_path": "qlib.contrib.data.handler",
-                "kwargs": get_data_handler_config(**handler_kwargs),
+                "kwargs": get_data_handler_config(**kwargs), # 使用填充好日期的 kwargs
             },
             "segments": {
                 "train": train,
