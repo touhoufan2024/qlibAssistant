@@ -64,6 +64,17 @@ class ModelCLI:
             exp = R.get_exp(experiment_name=a)
             print(f"Experiment: {a} {exp.id}")
 
+
+    def filter_rec(self, rec):
+        ic_info, ic_list = self.get_ic_info(rec)
+        ic_filter = self.kwargs['rec_filter']
+        # print(ic_list, ic_filter)
+        all_passed = all(val > list(d.values())[0] for val, d in zip(ic_list, ic_filter))
+        # print("all_passed:", all_passed)
+        if not all_passed:
+            return False
+        return True
+
     def get_model_list(self):
         logger.info("get all model in the uri_folder:")
         f_list = self.kwargs['model_filter']
@@ -83,6 +94,8 @@ class ModelCLI:
                 lista = rec.list_artifacts()
                 if "params.pkl" not in lista or "sig_analysis" not in lista:
                     continue
+                if not self.filter_rec(rec):
+                    continue
                 mc.rid.append(rid)
             ret.append(mc)
         return ret
@@ -101,7 +114,7 @@ class ModelCLI:
             "Rank IC": float(np.around(RankIC, 3)),
             "Rank ICIR": float(np.around(RankICIR, 3)),
         }
-        return ic_info
+        return ic_info, [IC, ICIR, RankIC, RankICIR]
 
     def get_train_time(self, rec):
         task = rec.load_object("task")
@@ -114,7 +127,7 @@ class ModelCLI:
 
     def print_rec(self, rec):
         task = rec.load_object("task")
-        ic_info = self.get_ic_info(rec)
+        ic_info, ic_list = self.get_ic_info(rec)
         data_train_vec, train_time_vec = self.get_train_time(rec)
         print("\t", rec.id, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec, train_time_vec)
 
@@ -124,7 +137,7 @@ class ModelCLI:
         model_list = self.get_model_list()
         for mc in model_list:
             exp = R.get_exp(experiment_name=mc.exp_name)
-            count = len(exp.list_recorders())
+            count = len(mc.rid)
             print(f"Experiment: {exp.name} {exp.id} (Recorders: {count})")
             if all:
                 for rid in mc.rid:
