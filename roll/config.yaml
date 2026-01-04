@@ -22,16 +22,16 @@ rolling_type: expanding
 # 限定股票列表
 stock_list:
   - SH601699
-  - SH601318
+  # - SH601318
   # - my_test_stockA
 
 # 预测日期区间, 替代 test segment
-# predict_dates:
-#   - start: 2025-12-20
-#     end: 2025-12-24
+predict_dates:
+  - start: 2025-12-19
+    end: 2025-12-19
 
 # 模型过滤器, 支持正则表达式
 model_filter:
   # - "158"
   # - testxx
-  - .*
+  - p_LinearModel_Alpha158_s_20260102_19

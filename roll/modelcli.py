@@ -190,8 +190,8 @@ class ModelCLI:
                 dataset_config = task['dataset']
                 # pprint(dataset_config)
 
-                predict_date1 = pd.Timestamp("2025-12-20")
-                predict_date2 = pd.Timestamp("2025-12-24")
+                predict_date1 = pd.Timestamp(self.kwargs['predict_dates'][0]['start'])
+                predict_date2 = pd.Timestamp(self.kwargs['predict_dates'][0]['end'])
                 dataset_config['kwargs']['segments']['test'] = (predict_date1, predict_date2)
                 dataset_config['kwargs']['handler']['kwargs']['end_time'] = predict_date2
                 if stock_list is not None:
