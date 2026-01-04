@@ -6,6 +6,7 @@
 #   - my_taskA
 #   - my_taskB
 #   - my_taskC
+uri_folder: "~/.qlibAssistant/mlruns"
 
 pfx_name: p
 sfx_name: s

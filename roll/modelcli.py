@@ -43,9 +43,9 @@ class ModelCLI:
         self,
         region=REG_CN,
         provider_uri="~/.qlib/qlib_data/cn_data",
-        uri_folder="~/.qlibAssistant/mlruns",
         **kwargs
     ):
+        uri_folder = kwargs["uri_folder"]
         self.kwargs = kwargs
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
