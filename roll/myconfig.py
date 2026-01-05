@@ -94,9 +94,6 @@ XGBOOST_MODEL = {
     }
 }
 
-# TFT_MODEL = {
-# }
-
 DOUBLE_ENSEMBLE_MODEL = {
  "class": "DEnsembleModel",
     "module_path": "qlib.contrib.model.double_ensemble",
@@ -179,24 +176,6 @@ RECORD_CONFIG = [
     SA_RC,
 ]
 
-
-# def get_data_handler_config(
-#     start_time="2014-01-01",
-#     end_time="2066-08-01",
-#     fit_start_time="<dataset.kwargs.segments.train.0>",
-#     fit_end_time="<dataset.kwargs.segments.train.1>",
-#     instruments=CSI300_MARKET,
-# ):
-#     return {
-#         "start_time": start_time,
-#         "end_time": end_time,
-#         "fit_start_time": fit_start_time,
-#         "fit_end_time": fit_end_time,
-#         "instruments": instruments,
-#     }
-
-
-
 def get_data_handler_config(
     start_time="2014-01-01",
     end_time="2066-08-01",
@@ -211,30 +190,6 @@ def get_data_handler_config(
         "fit_end_time": fit_end_time,
         "instruments": instruments,
     }
-
-# def get_dataset_config(
-#     dataset_class=DATASET_ALPHA158_CLASS,
-#     train=("2015-01-01", "2016-12-31"),
-#     valid=("2017-01-01", "2017-02-28"),
-#     test=("2017-03-01", "2026-12-31"),
-#     handler_kwargs={"instruments": CSI300_MARKET},
-# ):
-#     return {
-#         "class": "DatasetH",
-#         "module_path": "qlib.data.dataset",
-#         "kwargs": {
-#             "handler": {
-#                 "class": dataset_class,
-#                 "module_path": "qlib.contrib.data.handler",
-#                 "kwargs": get_data_handler_config(**handler_kwargs),
-#             },
-#             "segments": {
-#                 "train": train,
-#                 "valid": valid,
-#                 "test": test,
-#             },
-#         },
-#     }
 
 def get_dataset_config(
     dataset_class=DATASET_ALPHA158_CLASS,
