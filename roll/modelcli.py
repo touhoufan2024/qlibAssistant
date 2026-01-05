@@ -68,6 +68,8 @@ class ModelCLI:
     def filter_rec(self, rec):
         ic_info, ic_list = self.get_ic_info(rec)
         ic_filter = self.kwargs['rec_filter']
+        if not ic_filter:
+            return True
         # print(ic_list, ic_filter)
         all_passed = all(val > list(d.values())[0] for val, d in zip(ic_list, ic_filter))
         # print("all_passed:", all_passed)
@@ -130,7 +132,7 @@ class ModelCLI:
         ic_info, ic_list = self.get_ic_info(rec)
         data_train_vec, train_time_vec = self.get_train_time(rec)
         print("\t", rec.id, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec, train_time_vec)
-        print(task)
+        # print(task)
 
 
     def ls(self, all=False):

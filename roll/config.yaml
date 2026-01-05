@@ -38,7 +38,7 @@ model_filter:
     - .*
 
 rec_filter:
-  - ic: 0.0005
-  - icir: 0.0002
-  - rankic: 0.0005
-  - rankicir: 0.0002
+#   - ic: 0.0005
+#   - icir: 0.0002
+#   - rankic: 0.0005
+#   - rankicir: 0.0002
