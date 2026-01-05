@@ -1,4 +1,5 @@
 from loguru import logger
+from tabulate import tabulate
 from utils import check_match_in_list
 import numpy as np
 import pandas as pd
@@ -228,7 +229,11 @@ class ModelCLI:
 
         # 应用新顺序
         df_final = df_final[target_order]
-        print(df_final)
+        # print(df_final)
+        table_str = tabulate(df_final, headers='keys', tablefmt='psql', showindex=False)
+
+        print(table_str)
+        df_final.to_csv("prediction_results.csv", index=False, encoding="utf-8-sig")
 
     def selection(self):
         """
