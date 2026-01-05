@@ -198,67 +198,53 @@ class ModelCLI:
         """
         问股, 分析股票列表的 score
         """
-        logger.info("This is a placeholder for the inquiry method.")
-        stock_list = self.kwargs['stock_list']
+        stock_list = self.kwargs.get('stock_list', [])
         results = self.anilysis(stock_list=stock_list)
-        processed_list = []
+        
+        if not results:
+            logger.warning("未获取到分析结果 (results is empty).")
+            return
 
-        for item in results:
-            exp_name = item[0]
-            rid = item[1]
-            series_data = item[2]
-            
-            # 1. 转为 DataFrame 并给预测分数列起名 (比如 'score')
-            df = series_data.to_frame(name='score')
-            
-            # 2. 【关键】先把索引 (datetime, instrument) 变成普通列
-            # 这样方便后面统一调整所有列的顺序
-            df = df.reset_index()
-            
-            # 3. 添加 exp_name 和 rid 列
+        # --- 1. 数据处理 (List Comprehension + Pandas) ---
+        processed_list = []
+        for exp_name, rid, series_data in results:
+            # 链式调用：转DataFrame -> 重置索引 -> 添加新列
+            df = series_data.to_frame(name='score').reset_index()
             df['exp_name'] = exp_name
             df['rid'] = rid
-            
             processed_list.append(df)
 
-        # 4. 纵向合并所有数据
+        # 合并并调整列顺序
         df_final = pd.concat(processed_list, axis=0, ignore_index=True)
+        target_cols = ['exp_name', 'rid', 'datetime', 'instrument', 'score']
+        # 确保列存在再筛选，防止报错 (鲁棒性)
+        df_final = df_final[[c for c in target_cols if c in df_final.columns]]
 
-        # 5. 【核心步骤】调整列顺序：把 exp_name 和 rid 放到最前面
-        # 定义你想要的列顺序
-        target_order = ['exp_name', 'rid', 'datetime', 'instrument', 'score']
+        # --- 2. 终端打印 ---
+        # 打印表格 (psql 风格好看)
+        print(tabulate(df_final, headers='keys', tablefmt='psql', showindex=False))
 
-        # 应用新顺序
-        df_final = df_final[target_order]
-        # print(df_final)
-        table_str = tabulate(df_final, headers='keys', tablefmt='psql', showindex=False)
-
-        print(table_str)
-        md_str =  df_final.to_markdown(index=True)
-        # df_final.to_csv("prediction_results.csv", index=False, encoding="utf-8-sig")
-
-        logger.info("This is a placeholder for the test method.")
-        anilysis_folder = str(Path(self.kwargs['anilysis_folder']).expanduser())
-        logger.info(f"anilysis_folder: {anilysis_folder}")
-        os.makedirs(anilysis_folder, exist_ok=True)
+        # --- 3. 路径准备 (使用 pathlib) ---
+        # 基础目录
+        base_dir = Path(self.kwargs['anilysis_folder']).expanduser()
         
-        now = datetime.datetime.now()
-        time_str = now.strftime("%Y%m%d_%H_%M_%S")
-        name = "inquiry" + "_" + time_str
-        sub_folder = os.path.join(anilysis_folder, name)
-        os.makedirs(sub_folder, exist_ok=True)
-        logger.info(f"sub_folder: {sub_folder}")
+        # 子目录: inquiry_YYYYMMDD_HH_MM_SS
+        now_str = datetime.datetime.now().strftime("%Y%m%d_%H_%M_%S")
+        save_dir = base_dir / f"inquiry_{now_str}"
+        
+        # 自动创建目录 (相当于 mkdir -p)
+        save_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"保存目录: {save_dir}")
 
-        total_file_path = os.path.join(sub_folder, "total.md")
-        logger.info(f"total_file_path: {total_file_path}")
+        # --- 4. 文件保存 ---
+        # 保存 Markdown (使用 write_text 一行搞定)
+        md_content = f"# {now_str}\n\n{df_final.to_markdown(index=False)}"
+        (save_dir / "total.md").write_text(md_content, encoding="utf-8")
 
-        with open(total_file_path, "w", encoding="utf-8") as f:
-            f.write(f"# {time_str}\n")
-            f.write(f"{md_str}\n")
-
-        csv_file_path = os.path.join(sub_folder, "total.csv")
-        logger.info(f"csv_file_path: {csv_file_path}")
-        df_final.to_csv(csv_file_path, index=False, encoding="utf-8-sig")
+        # 保存 CSV
+        df_final.to_csv(save_dir / "total.csv", index=False, encoding="utf-8-sig")
+        
+        logger.info("分析结果保存完成。")
 
     def selection(self):
         """
@@ -266,23 +252,3 @@ class ModelCLI:
         """
         logger.info("This is a placeholder for the selection method.")
         self.anilysis(stock_list=None)
-    
-    def test(self):
-        logger.info("This is a placeholder for the test method.")
-        anilysis_folder = str(Path(self.kwargs['anilysis_folder']).expanduser())
-        logger.info(f"anilysis_folder: {anilysis_folder}")
-        os.makedirs(anilysis_folder, exist_ok=True)
-        
-        now = datetime.datetime.now()
-        time_str = now.strftime("%Y%m%d_%H_%M_%S")
-        name = "inquiry" + "_" + time_str
-        sub_folder = os.path.join(anilysis_folder, name)
-        os.makedirs(sub_folder, exist_ok=True)
-        logger.info(f"sub_folder: {sub_folder}")
-
-        total_file_path = os.path.join(sub_folder, "total.md")
-        logger.info(f"total_file_path: {total_file_path}")
-
-        with open(total_file_path, "w", encoding="utf-8") as f:
-            f.write(f"# {time_str}")
-        

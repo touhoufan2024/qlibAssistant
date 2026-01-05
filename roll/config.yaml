@@ -7,6 +7,7 @@
 #   - my_taskB
 #   - my_taskC
 uri_folder: "~/.qlibAssistant/mlruns"
+anilysis_folder: "~/.qlibAssistant/anilysis"
 
 pfx_name: p
 sfx_name: s
@@ -22,12 +23,12 @@ rolling_type: expanding
 # 限定股票列表
 stock_list:
   - SH601699
-  # - SH601318
+  - SH601318
   # - my_test_stockA
 
 # 预测日期区间, 替代 test segment
 predict_dates:
-  - start: 2025-12-19
+  - start: 2025-12-18
     end: 2025-12-19
 
 # 模型过滤器, 支持正则表达式
