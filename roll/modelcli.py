@@ -20,6 +20,7 @@ import os
 from tqdm import tqdm
 from functools import partialmethod
 from pprint import pprint
+import datetime
 logger.remove()
 logger.add(
     sys.stderr,
@@ -233,7 +234,31 @@ class ModelCLI:
         table_str = tabulate(df_final, headers='keys', tablefmt='psql', showindex=False)
 
         print(table_str)
-        df_final.to_csv("prediction_results.csv", index=False, encoding="utf-8-sig")
+        md_str =  df_final.to_markdown(index=True)
+        # df_final.to_csv("prediction_results.csv", index=False, encoding="utf-8-sig")
+
+        logger.info("This is a placeholder for the test method.")
+        anilysis_folder = str(Path(self.kwargs['anilysis_folder']).expanduser())
+        logger.info(f"anilysis_folder: {anilysis_folder}")
+        os.makedirs(anilysis_folder, exist_ok=True)
+        
+        now = datetime.datetime.now()
+        time_str = now.strftime("%Y%m%d_%H_%M_%S")
+        name = "inquiry" + "_" + time_str
+        sub_folder = os.path.join(anilysis_folder, name)
+        os.makedirs(sub_folder, exist_ok=True)
+        logger.info(f"sub_folder: {sub_folder}")
+
+        total_file_path = os.path.join(sub_folder, "total.md")
+        logger.info(f"total_file_path: {total_file_path}")
+
+        with open(total_file_path, "w", encoding="utf-8") as f:
+            f.write(f"# {time_str}\n")
+            f.write(f"{md_str}\n")
+
+        csv_file_path = os.path.join(sub_folder, "total.csv")
+        logger.info(f"csv_file_path: {csv_file_path}")
+        df_final.to_csv(csv_file_path, index=False, encoding="utf-8-sig")
 
     def selection(self):
         """
@@ -241,3 +266,23 @@ class ModelCLI:
         """
         logger.info("This is a placeholder for the selection method.")
         self.anilysis(stock_list=None)
+    
+    def test(self):
+        logger.info("This is a placeholder for the test method.")
+        anilysis_folder = str(Path(self.kwargs['anilysis_folder']).expanduser())
+        logger.info(f"anilysis_folder: {anilysis_folder}")
+        os.makedirs(anilysis_folder, exist_ok=True)
+        
+        now = datetime.datetime.now()
+        time_str = now.strftime("%Y%m%d_%H_%M_%S")
+        name = "inquiry" + "_" + time_str
+        sub_folder = os.path.join(anilysis_folder, name)
+        os.makedirs(sub_folder, exist_ok=True)
+        logger.info(f"sub_folder: {sub_folder}")
+
+        total_file_path = os.path.join(sub_folder, "total.md")
+        logger.info(f"total_file_path: {total_file_path}")
+
+        with open(total_file_path, "w", encoding="utf-8") as f:
+            f.write(f"# {time_str}")
+        
