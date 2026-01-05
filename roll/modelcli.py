@@ -18,8 +18,6 @@ from qlib.utils import init_instance_by_config
 import os
 from tqdm import tqdm
 from functools import partialmethod
-# 强制禁用所有 tqdm 进度条
-# tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 from pprint import pprint
 logger.remove()
 logger.add(
@@ -164,43 +162,6 @@ class ModelCLI:
                 if (not rec.list_artifacts()) or ("params.pkl" not in rec.list_artifacts()) or ("sig_analysis" not in rec.list_artifacts()):
                     logger.info(f"Experiment: {name} 删除 Recorder: {rid} ")
                     exp.delete_recorder(rid)
-
-    def test(self):
-        """测试函数"""
-        logger.info("This is a test log from PredCLI.test()")
-        exp_name = "test1222pm"
-        rid = "f4e011d0d4934706bea7b03936b377f7"
-        exp = R.get_exp(experiment_name=exp_name)
-
-        target_stock = "SH601699"
-
-        rec = exp.get_recorder(recorder_id=rid)
-        task = rec.load_object("task")
-
-        model = rec.load_object("params.pkl")
-        logger.info("模型加载成功:", model)
-
-        dataset_config = task['dataset']
-        pprint(dataset_config)
-
-        predict_date1 = pd.Timestamp("2025-12-20")
-        predict_date2 = pd.Timestamp("2025-12-24")
-        dataset_config['kwargs']['segments']['test'] = (predict_date1, predict_date2)
-        dataset_config['kwargs']['handler']['kwargs']['end_time'] = predict_date2
-        dataset_config['kwargs']['handler']['kwargs']['instruments'] = [target_stock]
-        pprint(dataset_config)
-
-        dataset = init_instance_by_config(dataset_config)
-
-        logger.info("数据集加载成功")
-
-        example_df = dataset.prepare("test")
-        print(example_df.head())
-
-        pred_score = model.predict(dataset, segment="test")
-
-        pprint(pred_score)
-
 
     def anilysis(self, stock_list = None):
         """
