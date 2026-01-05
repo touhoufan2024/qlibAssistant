@@ -48,7 +48,7 @@ class ModelCLI:
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
-        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager, n_jobs = 8) 
+        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager) 
 
     def filter_rec(self, rec):
         ic_info, ic_list = self.get_ic_info(rec)
