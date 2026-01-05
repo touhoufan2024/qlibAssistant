@@ -35,7 +35,7 @@ model_filter:
   # - "158"
   # - testxx
   # - p_LinearModel_Alpha158_s_20260102_19
-    - .*
+    - EXP_DEnsembleModel
 
 rec_filter:
 #   - ic: 0.0005

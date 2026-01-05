@@ -66,9 +66,3 @@ class DataCLI:
         code, stdout, stderr = run_command("tail -n 1 ~/.qlib/qlib_data/cn_data/calendars/day.txt")
         latest_date = stdout
         logger.info(f"本地数据已更新至: {latest_date}")
-
-    def check(self, code):
-        """检查特定股票的数据完整性"""
-        logger.info(f"正在抽查股票 [{code}] 的数据...")
-        # TODO: Feature(instruments=[code])...
-        logger.debug(f"[{code}] OHLCV 数据校验通过")
