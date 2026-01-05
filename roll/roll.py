@@ -51,7 +51,8 @@ class RollingTrader:
                 if file_params:
                     final_params.update(file_params)
         else:
-            print(f"No config file found at: {config_path}, using defaults and CLI args only.")
+            logger.err(f"No config file found at: {config_path}, using defaults and CLI args only.")
+            exit(0)
 
         # === 3. 合并命令行参数 (CLI 优先级最高，覆盖文件配置) ===
         # kwargs 包含例如 python myroll.py --region="us" 这种通过命令行强制指定的
