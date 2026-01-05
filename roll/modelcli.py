@@ -148,6 +148,23 @@ class ModelCLI:
                     rec = exp.get_recorder(recorder_id=rid)
                     self.print_rec(rec)
 
+    def clean(self):
+        logger.info("清除无效的exp_name 和 rec:")
+        exps = R.list_experiments()
+        for name in exps:
+            if name == 'Default':
+                continue
+            exp = R.get_exp(experiment_name=name)
+            if len(exp.list_recorders()) == 0:
+                logger.info(f"删除 Experiment: {name} {exp.id}")
+                R.delete_exp(experiment_name=name)
+                continue
+            for rid in exp.list_recorders():
+                rec = exp.get_recorder(recorder_id=rid)
+                if (not rec.list_artifacts()) or ("params.pkl" not in rec.list_artifacts()) or ("sig_analysis" not in rec.list_artifacts()):
+                    logger.info(f"Experiment: {name} 删除 Recorder: {rid} ")
+                    exp.delete_recorder(rid)
+
     def test(self):
         """测试函数"""
         logger.info("This is a test log from PredCLI.test()")
