@@ -63,7 +63,7 @@ class ModelCLI:
         return True
 
     def get_model_list(self):
-        logger.info("get all model in the uri_folder:")
+        logger.info(f"get all model in the uri_folder: {self.kwargs['uri_folder']}")
         f_list = self.kwargs['model_filter']
         exps = R.list_experiments()
         ret = []
@@ -85,6 +85,8 @@ class ModelCLI:
                     continue
                 mc.rid.append(rid)
             ret.append(mc)
+        logger.info(f"model_filter {self.kwargs['model_filter']}, rec_filter {self.kwargs['rec_filter']}")
+        logger.info(f"experiment num: {str(len(ret))}, rid num: {str(sum(len(mc.rid) for mc in ret))}")
         return ret
 
     def get_ic_info(self, rec):
