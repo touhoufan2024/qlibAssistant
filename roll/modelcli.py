@@ -237,9 +237,14 @@ class ModelCLI:
         logger.info(f"保存目录: {save_dir}")
 
         # --- 4. 文件保存 ---
-        # 保存 Markdown (使用 write_text 一行搞定)
-        md_content = f"# {now_str}\n\n{df_final.to_markdown(index=False)}"
-        (save_dir / "total.md").write_text(md_content, encoding="utf-8")
+        # 构建 Markdown 内容
+        # 定义文件路径 (Path 对象可以直接传给 open)
+        md_file_path = save_dir / "total.md"
+        # 使用 with open 写入
+        with open(md_file_path, "w", encoding="utf-8") as f:
+            f.write(f" {now_str}\n\n")
+            f.write(f" {self.kwargs}\n\n")
+            f.write(f"{df_final.to_markdown(index=False)}")
 
         # 保存 CSV
         df_final.to_csv(save_dir / "total.csv", index=False, encoding="utf-8-sig")
