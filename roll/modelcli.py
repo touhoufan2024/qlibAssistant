@@ -158,7 +158,7 @@ class ModelCLI:
         """
         logger.info("This is a placeholder for the analysis method.")
         logger.info(f"股票列表: {stock_list}")
-
+        ret = []
         model_list = self.get_model_list()
         for mc in model_list:
             exp = R.get_exp(experiment_name=mc.exp_name)
@@ -189,6 +189,8 @@ class ModelCLI:
                 # print(example_df.head())
                 pred_score = model.predict(dataset, segment="test")
                 pprint(pred_score)
+                ret.append([mc.exp_name, rid, pred_score])
+        return ret
 
     def inquiry(self):
         """
@@ -196,7 +198,37 @@ class ModelCLI:
         """
         logger.info("This is a placeholder for the inquiry method.")
         stock_list = self.kwargs['stock_list']
-        self.anilysis(stock_list=stock_list)
+        results = self.anilysis(stock_list=stock_list)
+        processed_list = []
+
+        for item in results:
+            exp_name = item[0]
+            rid = item[1]
+            series_data = item[2]
+            
+            # 1. 转为 DataFrame 并给预测分数列起名 (比如 'score')
+            df = series_data.to_frame(name='score')
+            
+            # 2. 【关键】先把索引 (datetime, instrument) 变成普通列
+            # 这样方便后面统一调整所有列的顺序
+            df = df.reset_index()
+            
+            # 3. 添加 exp_name 和 rid 列
+            df['exp_name'] = exp_name
+            df['rid'] = rid
+            
+            processed_list.append(df)
+
+        # 4. 纵向合并所有数据
+        df_final = pd.concat(processed_list, axis=0, ignore_index=True)
+
+        # 5. 【核心步骤】调整列顺序：把 exp_name 和 rid 放到最前面
+        # 定义你想要的列顺序
+        target_order = ['exp_name', 'rid', 'datetime', 'instrument', 'score']
+
+        # 应用新顺序
+        df_final = df_final[target_order]
+        print(df_final)
 
     def selection(self):
         """
