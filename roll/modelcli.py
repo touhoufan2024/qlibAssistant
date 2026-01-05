@@ -50,19 +50,6 @@ class ModelCLI:
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
         qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager, n_jobs = 8) 
 
-    def filter(self):
-        f_list = self.kwargs['model_filter']
-
-        exps = R.list_experiments()
-        for a, b in exps.items():
-            if a == 'Default':
-                continue
-            if not check_match_in_list(a, f_list):
-                continue
-            exp = R.get_exp(experiment_name=a)
-            print(f"Experiment: {a} {exp.id}")
-
-
     def filter_rec(self, rec):
         ic_info, ic_list = self.get_ic_info(rec)
         ic_filter = self.kwargs['rec_filter']
