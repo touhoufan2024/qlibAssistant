@@ -160,3 +160,20 @@ def get_real_github_hash(repo_url, target_filename):
     else:
         print("⚠️ 找到了文件，但在旁边没有发现哈希值（可能该文件类型GitHub未计算显示哈希）。")
         exit(1)
+
+
+def append_to_file(file_path, content):
+    """
+    向指定文件末尾追加字符串。
+    
+    :param file_path: 文件路径
+    :param content: 要追加的字符串内容
+    """
+    try:
+        # mode='a' 代表 append (追加模式)
+        # encoding='utf-8' 防止中文乱码
+        with open(file_path, mode='a', encoding='utf-8') as f:
+            f.write(content)
+        print(f"成功追加内容到: {file_path}")
+    except Exception as e:
+        print(f"写入失败: {e}")

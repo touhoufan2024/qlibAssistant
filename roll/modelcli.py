@@ -1,6 +1,6 @@
 from loguru import logger
 from tabulate import tabulate
-from utils import check_match_in_list
+from utils import check_match_in_list, append_to_file
 import numpy as np
 import pandas as pd
 import sys
@@ -154,10 +154,11 @@ class ModelCLI:
                     logger.info(f"Experiment: {name} 删除 Recorder: {rid} ")
                     exp.delete_recorder(rid)
 
-    def anilysis(self, stock_list = None):
+    def anilysis(self):
         """
         模型分析, 问股或者选股
         """
+        stock_list = self.kwargs.get('stock_list', [])
         logger.info("This is a placeholder for the analysis method.")
         logger.info(f"股票列表: {stock_list}")
         ret = []
@@ -198,13 +199,21 @@ class ModelCLI:
         """
         问股, 分析股票列表的 score
         """
-        stock_list = self.kwargs.get('stock_list', [])
-        results = self.anilysis(stock_list=stock_list)
+        results = self.anilysis()
         
         if not results:
             logger.warning("未获取到分析结果 (results is empty).")
             return
+        self.collect(results)
 
+    def selection(self):
+        """
+        选股, 分析csi300成分股的 score
+        """
+        logger.info("This is a placeholder for the selection method.")
+        self.anilysis()
+
+    def collect(self, results):
         # --- 1. 数据处理 (List Comprehension + Pandas) ---
         processed_list = []
         for exp_name, rid, series_data in results:
@@ -240,20 +249,20 @@ class ModelCLI:
         # 构建 Markdown 内容
         # 定义文件路径 (Path 对象可以直接传给 open)
         md_file_path = save_dir / "total.md"
-        # 使用 with open 写入
-        with open(md_file_path, "w", encoding="utf-8") as f:
-            f.write(f" {now_str}\n\n")
-            f.write(f" {self.kwargs}\n\n")
-            f.write(f"{df_final.to_markdown(index=False)}")
+
+        append_to_file(md_file_path, f" {now_str}\n\n")
+        append_to_file(md_file_path, f" {self.kwargs}\n\n")
+        append_to_file(md_file_path, " # total\n\n")
+        append_to_file(md_file_path, f"{df_final.to_markdown(index=False)}")
+        
+        stock_list = self.kwargs.get('stock_list', [])
+        if stock_list:
+            for stock in stock_list:
+                res = df_final[df_final['instrument'] == stock]
+                append_to_file(md_file_path, f"\n\n # {stock}\n\n")
+                append_to_file(md_file_path, f"{res.to_markdown(index=False)}")
 
         # 保存 CSV
         df_final.to_csv(save_dir / "total.csv", index=False, encoding="utf-8-sig")
         
         logger.info("分析结果保存完成。")
-
-    def selection(self):
-        """
-        选股, 分析csi300成分股的 score
-        """
-        logger.info("This is a placeholder for the selection method.")
-        self.anilysis(stock_list=None)

@@ -40,6 +40,6 @@ model_filter:
 
 rec_filter:
   - ic: 0.1
-  - icir: 0.02
+  - icir: 0.8
   - rankic: 0.05
   - rankicir: 0.02
