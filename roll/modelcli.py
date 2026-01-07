@@ -154,11 +154,10 @@ class ModelCLI:
                     logger.info(f"Experiment: {name} 删除 Recorder: {rid} ")
                     exp.delete_recorder(rid)
 
-    def anilysis(self):
+    def anilysis(self, stock_list=None):
         """
         模型分析, 问股或者选股
         """
-        stock_list = self.kwargs.get('stock_list', [])
         logger.info("This is a placeholder for the analysis method.")
         logger.info(f"股票列表: {stock_list}")
         ret = []
@@ -199,6 +198,17 @@ class ModelCLI:
         """
         问股, 分析股票列表的 score
         """
+        results = self.anilysis(stock_list=self.kwargs.get('stock_list', []))
+        
+        if not results:
+            logger.warning("未获取到分析结果 (results is empty).")
+            return
+        self.collect(results, stock_list=self.kwargs.get('stock_list', []))
+
+    def selection(self):
+        """
+        选股, 分析csi300成分股的 score
+        """
         results = self.anilysis()
         
         if not results:
@@ -206,15 +216,7 @@ class ModelCLI:
             return
         self.collect(results)
 
-    def selection(self):
-        """
-        选股, 分析csi300成分股的 score
-        """
-        logger.info("This is a placeholder for the selection method.")
-        self.anilysis()
-
-    def collect(self, results):
-        stock_list = self.kwargs.get('stock_list', [])
+    def collect(self, results, stock_list=None):
         func_name = "nameless"
         if stock_list:
             func_name = "inquiry"
