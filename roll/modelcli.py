@@ -214,6 +214,13 @@ class ModelCLI:
         self.anilysis()
 
     def collect(self, results):
+        stock_list = self.kwargs.get('stock_list', [])
+        func_name = "nameless"
+        if stock_list:
+            func_name = "inquiry"
+        else:
+            func_name = "selection"
+
         # --- 1. 数据处理 (List Comprehension + Pandas) ---
         processed_list = []
         for exp_name, rid, series_data in results:
@@ -228,39 +235,43 @@ class ModelCLI:
         target_cols = ['exp_name', 'rid', 'datetime', 'instrument', 'score']
         # 确保列存在再筛选，防止报错 (鲁棒性)
         df_final = df_final[[c for c in target_cols if c in df_final.columns]]
+        # 排序
+        df_final['datetime'] = pd.to_datetime(df_final['datetime'])
+        df_final = df_final.sort_values(by='datetime')
 
         # --- 2. 终端打印 ---
         # 打印表格 (psql 风格好看)
         print(tabulate(df_final, headers='keys', tablefmt='psql', showindex=False))
 
-        # --- 3. 路径准备 (使用 pathlib) ---
-        # 基础目录
+        # --- 3. 文件创建 ---
         base_dir = Path(self.kwargs['anilysis_folder']).expanduser()
-        
-        # 子目录: inquiry_YYYYMMDD_HH_MM_SS
         now_str = datetime.datetime.now().strftime("%Y%m%d_%H_%M_%S")
-        save_dir = base_dir / f"inquiry_{now_str}"
-        
-        # 自动创建目录 (相当于 mkdir -p)
+        save_dir = base_dir / f"{func_name}_{now_str}"
         save_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"保存目录: {save_dir}")
-
-        # --- 4. 文件保存 ---
-        # 构建 Markdown 内容
-        # 定义文件路径 (Path 对象可以直接传给 open)
         md_file_path = save_dir / "total.md"
+        logger.info(f"保存路径: {md_file_path}")
 
+        # --- 4. 保存 Markdown 和 CSV ---
         append_to_file(md_file_path, f" {now_str}\n\n")
         append_to_file(md_file_path, f" {self.kwargs}\n\n")
         append_to_file(md_file_path, " # total\n\n")
         append_to_file(md_file_path, f"{df_final.to_markdown(index=False)}")
         
-        stock_list = self.kwargs.get('stock_list', [])
+        # inquiry 模式下，按股票拆分保存
         if stock_list:
             for stock in stock_list:
                 res = df_final[df_final['instrument'] == stock]
                 append_to_file(md_file_path, f"\n\n # {stock}\n\n")
-                append_to_file(md_file_path, f"{res.to_markdown(index=False)}")
+
+                sub_df = df_final[df_final['instrument'] == stock].copy()
+                daily_scores = sub_df.groupby('datetime')['score'].apply(list)
+                append_to_file(md_file_path, f"--- 股票 {stock} 的每日预测统计 ---\n\n")
+                for date, scores in daily_scores.items():
+                    scores_str = ", ".join([str(s) for s in scores])
+                    positive_scores = [s for s in scores if s > 0]
+                    pos_pct = (len(positive_scores) / len(scores)) * 100
+                    append_to_file(md_file_path, f"{stock} 在 {date} 的 score 结果正向占比: {pos_pct}%\n\n")
+                append_to_file(md_file_path, f"{res.to_markdown(index=False)}\n\n")
 
         # 保存 CSV
         df_final.to_csv(save_dir / "total.csv", index=False, encoding="utf-8-sig")
