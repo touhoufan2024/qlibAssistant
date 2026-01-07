@@ -174,6 +174,6 @@ def append_to_file(file_path, content):
         # encoding='utf-8' 防止中文乱码
         with open(file_path, mode='a', encoding='utf-8') as f:
             f.write(content)
-        print(f"成功追加内容到: {file_path}")
+        # print(f"成功追加内容到: {file_path}")
     except Exception as e:
         print(f"写入失败: {e}")
