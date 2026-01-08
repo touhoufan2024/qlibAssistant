@@ -279,7 +279,7 @@ class ModelCLI:
                 date_str = str(date.date())
                 append_to_file(md_file_path, f"\n\n # {date_str}\n\n")
 
-                for model, model_df in group_df.groupby('exp_name'):
+                for model, model_df in group_df.groupby('rid'):
                     df_sorted = model_df.sort_values(by='score', ascending=False)
                     top_df = df_sorted.head(20).copy()  # 加上 .copy() 是为了避免后续修改时出现警告
                     append_to_file(md_file_path, f"\n\n ## 模型 {model}\n\n")
