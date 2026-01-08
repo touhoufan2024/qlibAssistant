@@ -256,8 +256,6 @@ class ModelCLI:
         # --- 4. 保存 Markdown 和 CSV ---
         append_to_file(md_file_path, f" {now_str}\n\n")
         append_to_file(md_file_path, f" {self.kwargs}\n\n")
-        append_to_file(md_file_path, " # total\n\n")
-        append_to_file(md_file_path, f"{df_final.to_markdown(index=False)}")
         
         # inquiry 模式下，按股票拆分保存
         if stock_list:
@@ -275,6 +273,20 @@ class ModelCLI:
                     append_to_file(md_file_path, f"{stock} 在 {date} 的 score 结果正向占比: {pos_pct}%\n\n")
                 append_to_file(md_file_path, f"{res.to_markdown(index=False)}\n\n")
 
+        # selection 模式下，按日期拆分保存
+        if not stock_list:
+            for date, group_df in df_final.groupby('datetime'):
+                date_str = str(date.date())
+                append_to_file(md_file_path, f"\n\n # {date_str}\n\n")
+
+                for model, model_df in group_df.groupby('exp_name'):
+                    df_sorted = model_df.sort_values(by='score', ascending=False)
+                    top_df = df_sorted.head(20).copy()  # 加上 .copy() 是为了避免后续修改时出现警告
+                    append_to_file(md_file_path, f"\n\n ## 模型 {model}\n\n")
+                    append_to_file(md_file_path, f"{top_df.to_markdown(index=False)}\n\n")
+
+        append_to_file(md_file_path, " # total\n\n")
+        append_to_file(md_file_path, f"{df_final.to_markdown(index=False)}")
         # 保存 CSV
         df_final.to_csv(save_dir / "total.csv", index=False, encoding="utf-8-sig")
         
