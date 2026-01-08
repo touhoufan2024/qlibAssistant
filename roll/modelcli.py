@@ -285,6 +285,13 @@ class ModelCLI:
                     append_to_file(md_file_path, f"\n\n ## 模型 {model}\n\n")
                     append_to_file(md_file_path, f"{top_df.to_markdown(index=False)}\n\n")
 
+                avg_series = group_df.groupby('instrument')['score'].mean()
+                sorted_avg_series = avg_series.sort_values(ascending=False)
+                ret_df = sorted_avg_series.reset_index()
+                ret_df.columns = ['instrument', 'avg_score']
+                append_to_file(md_file_path, f"\n\n ## 简单平均 \n\n")
+                append_to_file(md_file_path, f"{ret_df.to_markdown(index=False)}\n\n")
+
         append_to_file(md_file_path, " # total\n\n")
         append_to_file(md_file_path, f"{df_final.to_markdown(index=False)}")
         # 保存 CSV
