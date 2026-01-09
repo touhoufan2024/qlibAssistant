@@ -6,6 +6,7 @@ import pandas as pd
 import sys
 import qlib
 from qlib.constant import REG_CN
+from qlib.data import D
 from qlib.workflow import R
 from qlib.config import C
 from qlib.workflow.task.gen import RollingGen, task_generator
@@ -243,7 +244,23 @@ class ModelCLI:
 
         # --- 2. 终端打印 ---
         # 打印表格 (psql 风格好看)
-        print(tabulate(df_final, headers='keys', tablefmt='psql', showindex=False))
+        # print(tabulate(df_final, headers='keys', tablefmt='psql', showindex=False))
+
+        real_df = self.get_real_label()
+        label_clean = real_df.reset_index()
+        label_clean = label_clean[['datetime', 'instrument', 'real_label']]
+        df_final['datetime'] = pd.to_datetime(df_final['datetime'])
+        label_clean['datetime'] = pd.to_datetime(label_clean['datetime'])
+        result_df = pd.merge(
+            df_final, 
+            label_clean, 
+            on=['datetime', 'instrument'], 
+            how='left'
+        )
+        result_df['error'] = result_df['score'] - result_df['real_label']
+        result_df['abs_error'] = result_df['error'].abs()
+        df_final = result_df
+        print(result_df)
 
         # --- 3. 文件创建 ---
         base_dir = Path(self.kwargs['anilysis_folder']).expanduser()
@@ -288,6 +305,7 @@ class ModelCLI:
                 avg_series = group_df.groupby('instrument')['score'].mean()
                 sorted_avg_series = avg_series.sort_values(ascending=False)
                 ret_df = sorted_avg_series.reset_index()
+                # TODO:
                 ret_df.columns = ['instrument', 'avg_score']
                 append_to_file(md_file_path, f"\n\n ## 简单平均 \n\n")
                 append_to_file(md_file_path, f"{ret_df.to_markdown(index=False)}\n\n")
@@ -298,3 +316,13 @@ class ModelCLI:
         df_final.to_csv(save_dir / "total.csv", index=False, encoding="utf-8-sig")
         
         logger.info("分析结果保存完成。")
+
+    def get_real_label(self):
+        df = D.features(D.instruments('all'), ['Ref($close, -1)/$close - 1'],
+            start_time='2012-01-01',
+            end_time='2026-12-31',
+            freq='day')
+        df.columns = ['real_label']
+        # print(df.info()) 
+        # print(df)
+        return df
