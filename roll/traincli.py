@@ -15,6 +15,7 @@ from myconfig import get_my_config
 import os
 from pprint import pprint
 import datetime
+import gc
 logger.remove()
 logger.add(
     sys.stderr,
@@ -140,6 +141,9 @@ class TrainCLI:
                 logger.info(f"Skipping training for segment {train_time_seg} as it already exists in the experiment.")
                 continue
             
+            if idx % 5 == 0:
+                gc.collect()
+
             self.trainer.train(task)
 
     def task_collecting(self):
