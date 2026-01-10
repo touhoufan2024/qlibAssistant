@@ -16,6 +16,7 @@ import os
 from pprint import pprint
 import datetime
 import gc
+import multiprocessing
 logger.remove()
 logger.add(
     sys.stderr,
@@ -27,6 +28,50 @@ from functools import partialmethod
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 from qlib.workflow.task.gen import handler_mod as default_handler_mod
+
+
+def _train_worker(task, exp_name):
+    """
+    这是子进程实际执行的函数。
+    """
+    try:
+        # 打印 PID 方便观察
+        logger.info(f"🔵 [子进程 PID: {os.getpid()}] 开始训练...", flush=True)
+        
+        # 实例化 Trainer 并开始训练
+        trainer = TrainerR(experiment_name=exp_name)
+        trainer.train(task)
+        
+        logger.info(f"🟢 [子进程 PID: {os.getpid()}] 训练完成，准备释放内存。", flush=True)
+        os._exit(0)  # 确保子进程正常退出，exitcode 0
+    except Exception as e:
+        # 捕获异常打印出来，并再次抛出以确保 exitcode 非 0
+        logger.info(f"🔴 [子进程 PID: {os.getpid()}] 训练出错: {e}", flush=True)
+        raise e
+
+def run_train_blocking(task, exp_name):
+    """
+    主进程调用的函数。
+    功能：启动子进程 -> 阻塞等待 -> 返回结果
+    """
+    # 1. 创建子进程，目标是上面的 _train_worker 函数
+    p = multiprocessing.Process(target=_train_worker, args=(task, exp_name))
+    
+    # 2. 启动子进程
+    p.start()
+    
+    # 3. 【关键】阻塞主进程，直到子进程结束
+    # 此时主进程什么都不干，内存也不会增加，静静等待子进程销毁
+    p.join()
+    
+    logger.info(f"子进程 PID: {p.pid} 已结束，退出代码: {p.exitcode}")
+    # 4. 判断子进程是正常结束还是报错挂了
+    if p.exitcode == 0:
+        return True  # 成功
+    else:
+        logger.info(f"⚠️ 任务失败，子进程退出代码: {p.exitcode}")
+        return False # 失败
+
 
 def my_enhanced_handler_mod(task, rg):
     # 1. 先调用官方自带的逻辑，帮你处理 end_time 不够长的问题
@@ -141,10 +186,9 @@ class TrainCLI:
                 logger.info(f"Skipping training for segment {train_time_seg} as it already exists in the experiment.")
                 continue
             
-            if idx % 5 == 0:
-                gc.collect()
-
-            self.trainer.train(task)
+            run_train_blocking(task, exp_name)
+            gc.collect()
+            # self.trainer.train(task)
 
     def task_collecting(self):
         print("========== task_collecting ==========")
