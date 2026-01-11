@@ -305,8 +305,46 @@ class ModelCLI:
                 avg_series = group_df.groupby('instrument')['score'].mean()
                 sorted_avg_series = avg_series.sort_values(ascending=False)
                 ret_df = sorted_avg_series.reset_index()
-                # TODO:
                 ret_df.columns = ['instrument', 'avg_score']
+
+                try:
+                    # 1. 【关键步骤】预处理 real_df
+                    # 如果 datetime 在索引里，把它变成了普通列，这样才能用 real_df['datetime']
+                    # 为了不影响循环外的 real_df，我们只在切片时操作，或者使用一个临时变量
+                    temp_real_df = real_df.copy()
+                    if 'datetime' not in temp_real_df.columns:
+                        temp_real_df = temp_real_df.reset_index()
+
+                    # 2. 筛选当天的真实数据
+                    # 确保类型一致：把两边都转为字符串比较，最稳妥
+                    # (假设 date 是 Timestamp, temp_real_df['datetime'] 也是 Timestamp)
+                    daily_real_df = temp_real_df[temp_real_df['datetime'] == date].copy()
+                    
+                    # 3. 准备要合并的数据
+                    # 我们只需要 instrument 和 label
+                    if 'real_label' in daily_real_df.columns:
+                        daily_label = daily_real_df[['instrument', 'real_label']]
+                    else:
+                        # 尝试兼容 Qlib 默认的 label 列名 (通常是 'real_label' 或者 '$close' 等，具体看你数据)
+                        # 如果找不到 label，尝试找最后一列
+                        cols = daily_real_df.columns.tolist()
+                        # 排除掉 instrument 和 datetime
+                        value_cols = [c for c in cols if c not in ['datetime', 'instrument']]
+                        if value_cols:
+                            # 假设最后一列是 label
+                            target_col = value_cols[-1] 
+                            daily_label = daily_real_df[['instrument', target_col]].rename(columns={target_col: 'real_label'})
+                        else:
+                            print("Warning: 没在 real_df 里找到 label 列")
+                            daily_label = pd.DataFrame(columns=['instrument', 'real_label'])
+
+                    # 4. 合并
+                    ret_df = pd.merge(ret_df, daily_label, on='instrument', how='left')
+
+                except Exception as e:
+                    print(f"合并真实 Label 时出错 (日期: {date}): {e}")
+                    ret_df['real_label'] = float('nan')
+
                 append_to_file(md_file_path, f"\n\n ## 简单平均 \n\n")
                 append_to_file(md_file_path, f"{ret_df.to_markdown(index=False)}\n\n")
 
