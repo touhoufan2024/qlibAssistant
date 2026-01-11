@@ -318,7 +318,7 @@ class ModelCLI:
         logger.info("分析结果保存完成。")
 
     def get_real_label(self):
-        df = D.features(D.instruments('all'), ['Ref($close, -1)/$close - 1'],
+        df = D.features(D.instruments('all'), ['Ref($close, -2)/Ref($close, -1) - 1'],
             start_time='2012-01-01',
             end_time='2026-12-31',
             freq='day')
