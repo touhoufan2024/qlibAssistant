@@ -31,7 +31,7 @@ def check_match_in_list(strA, regex_list):
     return any(re.search(pattern, strA) for pattern in regex_list)
 
 def get_latest_url(base_url):
-    response = requests.get(base_url, allow_redirects=True, timeout=(5, 10))
+    response = requests.get(base_url, allow_redirects=True, timeout=(50, 100))
     response.raise_for_status()
     return response.url
 
