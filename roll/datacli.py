@@ -2,6 +2,7 @@ from loguru import logger
 from utils import run_command, get_latest_url, get_real_github_hash, calculate_file_sha256
 import sys
 import subprocess
+from pathlib import Path
 logger.remove()
 logger.add(
     sys.stderr,
@@ -25,7 +26,7 @@ class DataCLI:
         self.url0 = get_latest_url("https://github.com/chenditc/investment_data/releases/latest")
         github_hash = get_real_github_hash(self.url0, target_filename)
         logger.info(f"get github hash: {github_hash}")
-        local_hash = calculate_file_sha256("/tmp/qlib_bin.tar.gz")
+        local_hash = calculate_file_sha256(str(Path("~/tmp/qlib_bin.tar.gz").expanduser()))
         logger.info(f"get local hash: {local_hash}")
         if github_hash == local_hash:
             return False
@@ -51,11 +52,11 @@ class DataCLI:
             "D": self.proxyD
         }
         use_proxy = proxy_map.get(proxy.upper(), proxy)
-        self.wget_cmd = f"wget --no-proxy {use_proxy}{self.url} -O /tmp/qlib_bin.tar.gz"
+        self.wget_cmd = f"wget --no-proxy {use_proxy}{self.url} -O ~/tmp/qlib_bin.tar.gz"
         logger.info(f"使用代理 [{proxy}] 下载数据包...")
 
         subprocess.run(self.wget_cmd, shell=True)
-        subprocess.run("tar -zxvf /tmp/qlib_bin.tar.gz -C ~/.qlib/qlib_data/cn_data --strip-components=1", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run("tar -zxvf ~/tmp/qlib_bin.tar.gz -C ~/.qlib/qlib_data/cn_data --strip-components=1", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         logger.info(f"数据更新完成。")
         self.status()
 

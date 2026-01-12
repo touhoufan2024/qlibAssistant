@@ -2,10 +2,13 @@ import subprocess
 import requests
 from bs4 import BeautifulSoup
 import re
-
+from loguru import logger
+import os
 import hashlib
 
 import re
+os.environ['http_proxy'] = 'http://127.0.0.1:10808'
+os.environ['https_proxy'] = 'http://127.0.0.1:10808'
 
 def check_match(strA, strB):
     """
@@ -33,6 +36,7 @@ def check_match_in_list(strA, regex_list):
 def get_latest_url(base_url):
     response = requests.get(base_url, allow_redirects=True, timeout=(50, 100))
     response.raise_for_status()
+    logger.info(f"最终下载链接: {response.url}")
     return response.url
 
 def run_command(cmd):
