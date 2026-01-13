@@ -54,6 +54,11 @@ class RollingTrader:
             logger.err(f"No config file found at: {config_path}, using defaults and CLI args only.")
             exit(0)
 
+        if final_params['predict_dates'] is None:
+            code, stdout, stderr = run_command("tail -n 1 ~/.qlib/qlib_data/cn_data/calendars/day.txt")
+            logger.info(f"no predict_dates found in config, use lastest date in dataset: {stdout}")
+            final_params['predict_dates'] = [{"start": stdout.strip(), "end": stdout.strip()}]
+
         # === 3. 合并命令行参数 (CLI 优先级最高，覆盖文件配置) ===
         # kwargs 包含例如 python myroll.py --region="us" 这种通过命令行强制指定的
         final_params.update(kwargs)
