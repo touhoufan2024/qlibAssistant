@@ -5,6 +5,8 @@ import re
 from loguru import logger
 import os
 import hashlib
+import akshare as ak
+import pandas as pd
 
 import re
 os.environ['http_proxy'] = 'http://127.0.0.1:10808'
@@ -181,3 +183,45 @@ def append_to_file(file_path, content):
         # print(f"成功追加内容到: {file_path}")
     except Exception as e:
         print(f"写入失败: {e}")
+
+def process_stock_code_v2(code):
+    """
+    处理股票代码 (v2 升级版 - 适配北交所 920 新号段)
+    """
+    code = str(code)
+    
+    # 1. 上海主板/科创板 (6开头)
+    if code.startswith("6"):
+        return f"SH{code}"
+        
+    # 2. 深圳主板/创业板 (0, 3开头)
+    elif code.startswith(("0", "3")):
+        return f"SZ{code}"
+        
+    # 3. 北交所 (关键修改！)
+    # 包括传统的 8xx, 4xx 和最新的 920xx
+    elif code.startswith(("8", "4", "920")):
+        return f"BJ{code}"  # 北交所是 A 股，建议保留
+    
+    # 4. 上海 B 股 (900 开头) -> 必须在 920 判断之后，或者明确写 900
+    elif code.startswith("900"):
+        return f"SH{code}" # B 股剔除
+        
+    # 5. 深圳 B 股 (200 开头)
+    elif code.startswith("2"):
+        return f"SZ{code}" # B 股剔除
+        
+    # 其他
+    else:
+        return f"unknown{code}"
+
+def get_normalized_stock_list():
+    """
+    获取 AkShare 数据并立刻标准化的完整流程
+    """
+    print("正在从 AkShare 拉取实时行情...")
+    df = ak.stock_zh_a_spot_em()
+    data = df['代码'].apply(process_stock_code_v2)
+    df['代码'] = data
+    df.drop(columns=['序号'], inplace=True)  # 删除多余的 '序号' 列
+    return df

@@ -1,6 +1,6 @@
 from loguru import logger
 from tabulate import tabulate
-from utils import check_match_in_list, append_to_file
+from utils import check_match_in_list, append_to_file, get_normalized_stock_list
 import numpy as np
 import pandas as pd
 import sys
@@ -224,6 +224,8 @@ class ModelCLI:
         else:
             func_name = "selection"
 
+        latest_stock_list = get_normalized_stock_list()
+
         # --- 1. 数据处理 (List Comprehension + Pandas) ---
         processed_list = []
         for exp_name, rid, series_data in results:
@@ -292,6 +294,7 @@ class ModelCLI:
 
         # selection 模式下，按日期拆分保存
         if not stock_list:
+            last_date = df_final['datetime'].max()
             for date, group_df in df_final.groupby('datetime'):
                 date_str = str(date.date())
                 append_to_file(md_file_path, f"\n\n # {date_str}\n\n")
@@ -307,6 +310,7 @@ class ModelCLI:
                 ret_df = sorted_avg_series.reset_index()
                 ret_df.columns = ['instrument', 'avg_score']
 
+                # 合并真实 label
                 try:
                     # 1. 【关键步骤】预处理 real_df
                     # 如果 datetime 在索引里，把它变成了普通列，这样才能用 real_df['datetime']
@@ -345,8 +349,19 @@ class ModelCLI:
                     print(f"合并真实 Label 时出错 (日期: {date}): {e}")
                     ret_df['real_label'] = float('nan')
 
+                if date == last_date:
+                    # 合并 最新日期详细数据
+                    ret_df = pd.merge(
+                        ret_df,
+                        latest_stock_list, 
+                        left_on='instrument', 
+                        right_on='代码',
+                        how='left'
+                    )
+
                 append_to_file(md_file_path, f"\n\n ## 简单平均 \n\n")
                 append_to_file(md_file_path, f"{ret_df.to_markdown(index=False)}\n\n")
+                ret_df.to_csv(save_dir / f"{date_str}_ret.csv", index=False, encoding="utf-8-sig")
 
         append_to_file(md_file_path, " # total\n\n")
         append_to_file(md_file_path, f"{df_final.to_markdown(index=False)}")
