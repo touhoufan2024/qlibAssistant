@@ -305,12 +305,16 @@ class ModelCLI:
                     append_to_file(md_file_path, f"\n\n ## 模型 {model}\n\n")
                     append_to_file(md_file_path, f"{top_df.to_markdown(index=False)}\n\n")
 
-                avg_series = group_df.groupby('instrument')['score'].mean()
-                sorted_avg_series = avg_series.sort_values(ascending=False)
-                ret_df = sorted_avg_series.reset_index()
-                ret_df.columns = ['instrument', 'avg_score']
+                # 1. 计算平均分和正向比例
+                ret_df = group_df.groupby('instrument')['score'].agg(
+                    avg_score='mean',
+                    pos_ratio=lambda x: (x > 0).mean()
+                ).reset_index()
 
-                # 合并真实 label
+                # 2. 按照 avg_score 从高到低排序
+                ret_df = ret_df.sort_values(by='avg_score', ascending=False)
+
+                # 3. 合并真实 label
                 try:
                     # 1. 【关键步骤】预处理 real_df
                     # 如果 datetime 在索引里，把它变成了普通列，这样才能用 real_df['datetime']
@@ -350,7 +354,7 @@ class ModelCLI:
                     ret_df['real_label'] = float('nan')
 
                 if date == last_date:
-                    # 合并 最新日期详细数据
+                    # 4. 合并 最新日期详细数据
                     ret_df = pd.merge(
                         ret_df,
                         latest_stock_list, 
@@ -361,6 +365,7 @@ class ModelCLI:
 
                 append_to_file(md_file_path, f"\n\n ## 简单平均 \n\n")
                 append_to_file(md_file_path, f"{ret_df.to_markdown(index=False)}\n\n")
+                logger.info(f"保存日期 {date_str} 分析结果 {save_dir}")
                 ret_df.to_csv(save_dir / f"{date_str}_ret.csv", index=False, encoding="utf-8-sig")
 
         append_to_file(md_file_path, " # total\n\n")
