@@ -353,7 +353,7 @@ class ModelCLI:
                     print(f"合并真实 Label 时出错 (日期: {date}): {e}")
                     ret_df['real_label'] = float('nan')
 
-                if date == last_date:
+                if date == last_date or True:
                     # 4. 合并 最新日期详细数据
                     ret_df = pd.merge(
                         ret_df,
