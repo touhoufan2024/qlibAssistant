@@ -22,6 +22,7 @@ from tqdm import tqdm
 from functools import partialmethod
 from pprint import pprint
 import datetime
+from qlib.contrib.data.handler import Alpha158, Alpha360
 logger.remove()
 logger.add(
     sys.stderr,
@@ -376,11 +377,40 @@ class ModelCLI:
         logger.info("分析结果保存完成。")
 
     def get_real_label(self):
+        start_time = self.kwargs['predict_dates'][0]['start']
+        end_time = self.kwargs['predict_dates'][0]['end']
+        logger.info(f"获取 real_label 数据: {start_time} -> {end_time}")
+
         df = D.features(D.instruments('all'), ['Ref($close, -2)/Ref($close, -1) - 1'],
-            start_time='2012-01-01',
-            end_time='2026-12-31',
+            start_time = start_time,
+            end_time = end_time,
             freq='day')
         df.columns = ['real_label']
         # print(df.info()) 
         # print(df)
+        return df
+
+    def get_alpha_data(self, name="Alpha158"):
+        start_time = self.kwargs['predict_dates'][0]['start']
+        end_time = self.kwargs['predict_dates'][0]['end']
+        logger.info(f"获取 {name} 数据: {start_time} -> {end_time}")
+
+        # 设定参数
+        handler_kwargs = {
+            "instruments": "csi300",  # 或者 D.instruments('all')，但注意内存
+            "start_time": start_time,
+            "end_time": end_time,
+            "infer_processors": [] # 如果你想要原始值不归一化，可以传空列表，否则默认会有 ZScore
+        }
+
+        # 2. 实例化 Handler
+        if name == "Alpha158":
+            handler = Alpha158(**handler_kwargs)
+        if name == "Alpha360":
+            handler = Alpha360(**handler_kwargs)
+
+        # 3. 获取 DataFrame
+        # col_set="feature" 表示只获取特征列，不包含 label
+        df = handler.fetch(col_set="feature")
+        print(df)
         return df
