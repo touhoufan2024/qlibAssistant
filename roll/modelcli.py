@@ -250,6 +250,8 @@ class ModelCLI:
         # print(tabulate(df_final, headers='keys', tablefmt='psql', showindex=False))
 
         real_df = self.get_real_label()
+        alpha158_df = self.get_alpha_data()
+        alpha158_df = alpha158_df.reset_index()
         label_clean = real_df.reset_index()
         label_clean = label_clean[['datetime', 'instrument', 'real_label']]
         df_final['datetime'] = pd.to_datetime(df_final['datetime'])
@@ -354,15 +356,23 @@ class ModelCLI:
                     print(f"合并真实 Label 时出错 (日期: {date}): {e}")
                     ret_df['real_label'] = float('nan')
 
-                if date == last_date or True:
-                    # 4. 合并 最新日期详细数据
-                    ret_df = pd.merge(
-                        ret_df,
-                        latest_stock_list, 
-                        left_on='instrument', 
-                        right_on='代码',
-                        how='left'
-                    )
+                # 4. 合并 最新日期详细数据
+                ret_df = pd.merge(
+                    ret_df,
+                    latest_stock_list, 
+                    left_on='instrument', 
+                    right_on='代码',
+                    how='left'
+                )
+
+                alpha158_df_daily = alpha158_df[alpha158_df['datetime'] == date]
+                # 5. 合并 Alpha158 数据
+                ret_df = pd.merge(
+                    ret_df,
+                    alpha158_df_daily, 
+                    on='instrument', 
+                    how='left'
+                )
 
                 append_to_file(md_file_path, f"\n\n ## 简单平均 \n\n")
                 append_to_file(md_file_path, f"{ret_df.to_markdown(index=False)}\n\n")
