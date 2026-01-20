@@ -374,10 +374,13 @@ class ModelCLI:
                     how='left'
                 )
 
+                ret_filter_df = self.filter_ret_df(ret_df)
+
                 append_to_file(md_file_path, f"\n\n ## 简单平均 \n\n")
                 append_to_file(md_file_path, f"{ret_df.to_markdown(index=False)}\n\n")
                 logger.info(f"保存日期 {date_str} 分析结果 {save_dir}")
                 ret_df.to_csv(save_dir / f"{date_str}_ret.csv", index=False, encoding="utf-8-sig")
+                ret_filter_df.to_csv(save_dir / f"{date_str}_filter_ret.csv", index=False, encoding="utf-8-sig")
 
         append_to_file(md_file_path, " # total\n\n")
         append_to_file(md_file_path, f"{df_final.to_markdown(index=False)}")
@@ -385,6 +388,40 @@ class ModelCLI:
         df_final.to_csv(save_dir / "total.csv", index=False, encoding="utf-8-sig")
         
         logger.info("分析结果保存完成。")
+
+    def filter_ret_df(self, df):
+        # 1. 先清洗掉显而易见的错误数据/极端妖股 (针对你图中 0.10, 0.24 这种数据)
+        # 任何周期波动超过 10% 的，直接杀，CSI300 里不可能有这种正经票
+        df = df[ (df['STD5'] < 0.10) & (df['STD20'] < 0.10) & (df['STD60'] < 0.10) ]
+
+        # 2. 核心风控：剔除高风险 (针对 CSI300 的稳健性)
+        # 长期波动 < 5%，短期波动 < 6%
+        df = df[ (df['STD60'] < 0.05) & (df['STD5'] < 0.06) ]
+
+        # 3. (可选) 剔除突发爆雷
+        # 如果短期波动突然变成长期的 2 倍，说明最近几天情绪不对，先避险
+        df = df[ df['STD5'] < (df['STD60'] * 2) ]
+
+        # 4. (可选) 剔除极低流动性/死鱼
+        df = df[ df['STD20'] > 0.01 ]
+
+
+        # ROC 过滤逻辑
+        # 数据说明：1.10 代表涨 10%，0.90 代表跌 10%
+
+        # 1. 剔除深跌 (Falling Knife)：任何周期跌幅超过 20% 的直接剔除
+        # 这种票通常有雷，不要赌反弹
+        df = df[ (df['ROC10'] > 0.80) & (df['ROC20'] > 0.80) & (df['ROC60'] > 0.80) ]
+
+        # 2. 剔除暴涨 (Overbought)：短期(20天)涨幅超过 30% 的剔除
+        # 大盘股短期涨 30% 很难持续，回调风险大
+        df = df[ df['ROC20'] < 1.30 ]
+
+        # 3. (可选) 剔除长期阴跌：如果一个票 60天跌了 10% 以上，说明是弱势股
+        # 如果你想做多，最好剔除这种长期走弱的
+        df = df[ df['ROC60'] > 0.90 ]
+
+        return df
 
     def get_real_label(self):
         start_time = self.kwargs['predict_dates'][0]['start']
@@ -424,3 +461,7 @@ class ModelCLI:
         df = handler.fetch(col_set="feature")
         print(df)
         return df
+
+    def test(self):
+        latest_stock_list = get_normalized_stock_list()
+        print(latest_stock_list)
