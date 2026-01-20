@@ -6,8 +6,8 @@ from loguru import logger
 def run_batch_experiments():
     # 1. 定义参数列表
     model_names = ["XGBoost", "Linear", "DoubleEnsemble", "LightGBM"]
-    dataset_names = ["Alpha158", "Alpha360"]
-    stock_pools = ["csi300", "csi500"]
+    dataset_names = ["Alpha158"] #, "Alpha360"]
+    stock_pools = ["csi300"] #, "csi500"]
     rolling_types = ["sliding", "expanding"]
 
     # 2. 生成所有组合 (笛卡尔积)
