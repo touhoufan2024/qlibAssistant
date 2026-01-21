@@ -8,6 +8,7 @@ import hashlib
 import akshare as ak
 import pandas as pd
 import sys
+import datetime
 
 import re
 os.environ['http_proxy'] = 'http://127.0.0.1:10808'
@@ -233,3 +234,44 @@ def get_normalized_stock_list():
     df['code'] = data
     # print(df)
     return df
+
+def get_latest_trade_date_ak():
+    # 1. 获取新浪财经的交易日历
+    # 这个接口返回的是历史上所有交易日（含今天）
+    trade_calendar = ak.tool_trade_date_hist_sina()
+    trade_days = trade_calendar['trade_date'].tolist()
+
+    # 转换为 datetime.date 方便比较
+    # trade_days 已经是 datetime.date 格式
+
+    now = datetime.datetime.now()
+    today = now.date()
+    current_hour = now.hour
+
+    # 2. 找到今天在日历中的位置（或今天之前的最后一个交易日）
+    # 过滤掉未来的日期
+    past_trade_days = [d for d in trade_days if d <= today]
+
+    if not past_trade_days:
+        return None
+
+    last_trade_day = past_trade_days[-1]
+
+    # 3. 判断逻辑
+    if today == last_trade_day:
+        # 如果今天是交易日，判断是否已经收盘 (A股15:00收盘)
+        # 考虑到数据同步延迟，通常建议设为 15:05 或 15:10
+        if current_hour < 15:
+            # 尚未收盘，取上一个交易日
+            return past_trade_days[-2]
+        else:
+            # 已经收盘，今天就是“上一个已收盘交易日”
+            return last_trade_day
+    else:
+        # 今天不是交易日（周末或节假日），直接返回最近的一个
+        return last_trade_day
+
+
+def get_local_data_date():
+    code, stdout, stderr = run_command("tail -n 1 ~/.qlib/qlib_data/cn_data/calendars/day.txt")
+    return stdout
