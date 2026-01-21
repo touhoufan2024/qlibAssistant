@@ -1,25 +1,28 @@
+import os
+import re
+import sys
 import subprocess
+import hashlib
+import datetime
+from typing import Optional, Tuple, List, Union
+
+# Third party imports
 import requests
 from bs4 import BeautifulSoup
-import re
-from loguru import logger
-import os
-import hashlib
 import akshare as ak
 import pandas as pd
-import sys
-import datetime
+from loguru import logger
 
-import re
-os.environ['http_proxy'] = 'http://127.0.0.1:10808'
-os.environ['https_proxy'] = 'http://127.0.0.1:10808'
-
-def check_match(strA, strB):
+def check_match(strA: str, strB: str) -> bool:
     """
-    判断 strA 中是否存在符合正则表达式 strB 的内容
-    :param strA: 目标字符串
-    :param strB: 正则表达式 (Pattern)
-    :return: Boolean
+    Check if strA contains any matches for regex pattern strB
+    
+    Args:
+        strA: Target string to search
+        strB: Regex pattern to match against
+        
+    Returns:
+        bool: True if pattern matches, False otherwise
     """
     # re.search 扫描整个字符串并返回第一个成功的匹配，如果没有匹配则返回 None
     if re.search(strB, strA):
@@ -37,24 +40,40 @@ def check_match_in_list(strA, regex_list):
     # 只要有一个 pattern 能在 strA 中 search 到，就返回 True
     return any(re.search(pattern, strA) for pattern in regex_list)
 
-def get_latest_url(base_url):
-    response = requests.get(base_url, allow_redirects=True, timeout=(50, 100))
-    response.raise_for_status()
-    logger.info(f"最终下载链接: {response.url}")
-    return response.url
-
-def run_command(cmd):
+def get_latest_url(base_url: str) -> str:
     """
-    执行 Shell 命令并返回返回码、标准输出和标准错误。
+    Follow URL redirects to get final download URL
     
     Args:
-        cmd (str): 要执行的命令字符串 (例如: "ls -la")
+        base_url: Starting URL that may redirect
         
+    Returns: 
+        Final resolved URL after following all redirects
+        
+    Raises:
+        requests.HTTPError: If request fails
+    """
+    response = requests.get(base_url, allow_redirects=True, timeout=(50, 100))
+    response.raise_for_status()
+    logger.info(f"Final download URL: {response.url}")
+    return response.url
+
+def run_command(cmd: str) -> Tuple[int, str, str]:
+    """
+    Execute shell command and return exit code and output
+    
+    Args:
+        cmd: Shell command string to execute
+
     Returns:
-        tuple: (returncode, stdout, stderr)
-            - returncode (int): 0 表示成功，非 0 表示出错
-            - stdout (str): 标准输出内容
-            - stderr (str): 标准错误内容
+        Tuple containing:
+        - returncode: Exit code (0 = success)
+        - stdout: Standard output text  
+        - stderr: Standard error text
+
+    Note:
+        Uses subprocess.run() which is recommended for Python 3.5+
+        shell=True enables shell features like ~ expansion and pipes
     """
     try:
         # subprocess.run 是 Python 3.5+ 推荐的方式
@@ -76,37 +95,52 @@ def run_command(cmd):
         return -1, "", str(e)
 
 
-def calculate_file_sha256(file_path):
-    # 创建一个 sha256 对象
+def calculate_file_sha256(file_path: str) -> Optional[str]:
+    """Calculate SHA256 hash of file content
+    
+    Args:
+        file_path: Path to file to hash
+        
+    Returns:
+        str: SHA256 hex digest 
+        None: If file not found
+        
+    Note:
+        Uses rb mode to properly handle binary files
+    """
     sha256_hash = hashlib.sha256()
     
     try:
-        # 以二进制只读模式打开文件 ('rb')
-        #这是计算哈希的关键，不能用 'r'，否则换行符会导致哈希值错误
         with open(file_path, "rb") as f:
-            # 分块读取，每次读 4096 字节 (4KB) 或者是它的倍数
             for byte_block in iter(lambda: f.read(4096), b""):
                 sha256_hash.update(byte_block)
-        
-        # 返回十六进制字符串
         return sha256_hash.hexdigest()
-        
     except FileNotFoundError:
-        return "文件未找到"
+        logger.warning(f"File not found: {file_path}")
+        return None
 
-def get_real_github_hash(repo_url, target_filename):
+def get_real_github_hash(repo_url: str, target_filename: str) -> Optional[str]:
+    """Get SHA256 hash of GitHub release asset
+    
+    Args:
+        repo_url: GitHub release page URL
+        target_filename: Exact filename to lookup
+        
+    Returns:
+        str: SHA256 hash string if found
+        None: If unable to find hash
+    """
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     }
 
-    # print(f"1. 正在请求主页面: {repo_url} ...")
     try:
         session = requests.Session()
         response = session.get(repo_url, headers=headers)
         response.raise_for_status()
     except Exception as e:
-        print(f"❌ 请求失败: {e}")
-        return
+        logger.error(f"Failed to fetch GitHub page: {e}")
+        return None
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -186,43 +220,46 @@ def append_to_file(file_path, content):
     except Exception as e:
         print(f"写入失败: {e}")
 
-def process_stock_code_v2(code):
-    """
-    处理股票代码 (v2 升级版 - 适配北交所 920 新号段)
+def process_stock_code_v2(code: str) -> str:
+    """Process stock code to standardized format with exchange prefix
+    
+    Args:
+        code: Raw stock code (e.g. '600000', '000001')
+        
+    Returns:
+        str: Standardized code with exchange prefix (e.g. 'SH600000')
+        
+    Note:
+        Supports SH/SZ/BJ exchanges and filters B-shares
     """
     code = str(code)
     
-    # 1. 上海主板/科创板 (6开头)
-    if code.startswith("6"):
+    if code.startswith("6"):  # Shanghai
         return f"SH{code}"
-        
-    # 2. 深圳主板/创业板 (0, 3开头)
-    elif code.startswith(("0", "3")):
+    elif code.startswith(("0", "3")):  # Shenzhen
         return f"SZ{code}"
-        
-    # 3. 北交所 (关键修改！)
-    # 包括传统的 8xx, 4xx 和最新的 920xx
-    elif code.startswith(("8", "4", "920")):
-        return f"BJ{code}"  # 北交所是 A 股，建议保留
-    
-    # 4. 上海 B 股 (900 开头) -> 必须在 920 判断之后，或者明确写 900
-    elif code.startswith("900"):
-        return f"SH{code}" # B 股剔除
-        
-    # 5. 深圳 B 股 (200 开头)
-    elif code.startswith("2"):
-        return f"SZ{code}" # B 股剔除
-        
-    # 其他
+    elif code.startswith(("8", "4", "920")):  # Beijing
+        return f"BJ{code}"
+    elif code.startswith("900"):  # Shanghai B-share (filter)
+        return f"SH{code}"
+    elif code.startswith("200"):  # Shenzhen B-share (filter)
+        return f"SZ{code}"
     else:
         return f"unknown{code}"
 
-def get_normalized_stock_list():
-    # --- 强行移除代理设置 START ---
-    print("正在清除代理设置...", file=sys.stderr)
-    for key in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'all_proxy', 'ALL_PROXY']:
+def get_normalized_stock_list() -> pd.DataFrame:
+    """Get normalized stock list from AkShare
+    
+    Returns:
+        DataFrame with normalized stock codes
+        
+    Note:
+        Automatically clears proxy settings before request
+    """
+    logger.info("Clearing proxy settings...")
+    for key in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']:
         if key in os.environ:
-            print(f"发现并移除: {key}={os.environ[key]}", file=sys.stderr)
+            logger.debug(f"Removing {key}")
             del os.environ[key]
     """
     获取 AkShare 数据并立刻标准化的完整流程
