@@ -361,7 +361,7 @@ class ModelCLI:
                     ret_df,
                     latest_stock_list, 
                     left_on='instrument', 
-                    right_on='代码',
+                    right_on='code',
                     how='left'
                 )
 

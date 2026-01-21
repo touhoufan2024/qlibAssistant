@@ -7,6 +7,7 @@ import os
 import hashlib
 import akshare as ak
 import pandas as pd
+import sys
 
 import re
 os.environ['http_proxy'] = 'http://127.0.0.1:10808'
@@ -216,12 +217,19 @@ def process_stock_code_v2(code):
         return f"unknown{code}"
 
 def get_normalized_stock_list():
+    # --- 强行移除代理设置 START ---
+    print("正在清除代理设置...", file=sys.stderr)
+    for key in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'all_proxy', 'ALL_PROXY']:
+        if key in os.environ:
+            print(f"发现并移除: {key}={os.environ[key]}", file=sys.stderr)
+            del os.environ[key]
     """
     获取 AkShare 数据并立刻标准化的完整流程
     """
     print("正在从 AkShare 拉取实时行情...")
-    df = ak.stock_zh_a_spot_em()
-    data = df['代码'].apply(process_stock_code_v2)
-    df['代码'] = data
-    df.drop(columns=['序号'], inplace=True)  # 删除多余的 '序号' 列
+    df = ak.stock_info_a_code_name()
+    # df = ak.stock_zh_a_spot()
+    data = df['code'].apply(process_stock_code_v2)
+    df['code'] = data
+    # print(df)
     return df

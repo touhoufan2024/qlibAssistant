@@ -29,7 +29,7 @@ stock_list:
 # 预测日期区间, 替代 test segment
 predict_dates:
   - start: 2026-01-14
-    end: 2026-01-20
+    end: 2026-01-21
 
 # 模型过滤器, 支持正则表达式
 model_filter:
