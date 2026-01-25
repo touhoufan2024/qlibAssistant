@@ -28,15 +28,15 @@ stock_list:
 
 # 预测日期区间, 替代 test segment
 predict_dates:
-  - start: 2026-01-14
-    end: 2026-01-21
+  - start: 2026-01-22
+    end: 2026-01-25
 
 # 模型过滤器, 支持正则表达式
 model_filter:
   - Alpha158.*csi300
 
 rec_filter:
-  - ic: 0.09
+  - ic: 0.1
   - icir: 0.6
   - rankic: 0.05
   - rankicir: 0.02

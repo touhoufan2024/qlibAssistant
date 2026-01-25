@@ -1,6 +1,6 @@
 from loguru import logger
 from tabulate import tabulate
-from utils import check_match_in_list, append_to_file, get_normalized_stock_list
+from utils import check_match_in_list, append_to_file, get_normalized_stock_list, filter_csv
 import numpy as np
 import pandas as pd
 import sys
@@ -381,6 +381,13 @@ class ModelCLI:
                 logger.info(f"保存日期 {date_str} 分析结果 {save_dir}")
                 ret_df.to_csv(save_dir / f"{date_str}_ret.csv", index=False, encoding="utf-8-sig")
                 ret_filter_df.to_csv(save_dir / f"{date_str}_filter_ret.csv", index=False, encoding="utf-8-sig")
+
+                ret_str = filter_csv(save_dir / f"{date_str}_ret.csv")
+                ret_filter_str = filter_csv(save_dir / f"{date_str}_filter_ret.csv")
+
+                append_to_file(md_file_path, f"\n\n ## 过滤字符串, 给ai分析用 \n\n")
+                append_to_file(md_file_path, f"```\n{ret_str}\n```\n\n")
+                append_to_file(md_file_path, f"```\n{ret_filter_str}\n```\n\n")
 
         append_to_file(md_file_path, " # total\n\n")
         append_to_file(md_file_path, f"{df_final.to_markdown(index=False)}")

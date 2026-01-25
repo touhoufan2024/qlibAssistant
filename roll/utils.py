@@ -30,6 +30,20 @@ def check_match(strA: str, strB: str) -> bool:
     else:
         return False
 
+def filter_csv(file_path):
+    df = pd.read_csv(file_path)
+
+    df2 = df[df['avg_score'] > 0].copy()
+    filtered_df = df2[df['pos_ratio'] > 0.8].copy()
+
+    def clean_code(text):
+        return "".join(re.findall(r'\d+', str(text)))
+
+    stock_codes = filtered_df['instrument'].apply(clean_code).tolist()
+
+    result_string = ",".join(stock_codes)
+
+    return result_string
 
 def check_match_in_list(strA, regex_list):
     """
