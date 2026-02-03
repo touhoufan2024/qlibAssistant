@@ -323,6 +323,6 @@ def get_latest_trade_date_ak():
         return last_trade_day
 
 
-def get_local_data_date():
-    code, stdout, stderr = run_command("tail -n 1 ~/.qlib/qlib_data/cn_data/calendars/day.txt")
+def get_local_data_date(provider_uri):
+    code, stdout, stderr = run_command(f"tail -n 1 {provider_uri}/calendars/day.txt")
     return stdout

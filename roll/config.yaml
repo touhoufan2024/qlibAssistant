@@ -6,8 +6,9 @@
 #   - my_taskA
 #   - my_taskB
 #   - my_taskC
-uri_folder: "~/.qlibAssistant/mlruns"
-anilysis_folder: "~/.qlibAssistant/anilysis"
+uri_folder: "~/.qlibAssistant/mlruns/"
+anilysis_folder: "~/.qlibAssistant/anilysis/"
+provider_uri: "~/.qlib/qlib_data/cn_data/"
 
 pfx_name: p
 sfx_name: s

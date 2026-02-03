@@ -9,7 +9,7 @@ import os
 from loguru import logger
 import requests
 import subprocess
-from utils import run_command
+from utils import get_local_data_date
 from datacli import DataCLI
 from traincli import TrainCLI
 from modelcli import ModelCLI
@@ -55,7 +55,7 @@ class RollingTrader:
             exit(0)
 
         if final_params['predict_dates'] is None:
-            code, stdout, stderr = run_command("tail -n 1 ~/.qlib/qlib_data/cn_data/calendars/day.txt")
+            stdout = get_local_data_date(final_params["provider_uri"])
             logger.info(f"no predict_dates found in config, use lastest date in dataset: {stdout}")
             final_params['predict_dates'] = [{"start": stdout.strip(), "end": stdout.strip()}]
 

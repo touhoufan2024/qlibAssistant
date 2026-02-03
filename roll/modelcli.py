@@ -44,10 +44,10 @@ class ModelCLI:
     def __init__(
         self,
         region=REG_CN,
-        provider_uri="~/.qlib/qlib_data/cn_data",
         **kwargs
     ):
         uri_folder = kwargs["uri_folder"]
+        provider_uri = kwargs["provider_uri"]
         self.kwargs = kwargs
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())

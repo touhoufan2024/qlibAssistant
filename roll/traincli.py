@@ -97,11 +97,11 @@ class TrainCLI:
         exp_name, 
         step = 40, 
         region=REG_CN,
-        provider_uri="~/.qlib/qlib_data/cn_data",
         experiment_name="rolling_exp",
         **kwargs
     ):
         uri_folder = kwargs["uri_folder"]
+        provider_uri = kwargs["provider_uri"]
         self.exp_name = exp_name
         self.step = step
         self.kwargs = kwargs

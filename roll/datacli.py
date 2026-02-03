@@ -18,11 +18,12 @@ class DataCLI:
     """
     def __init__(self, region: str, **kwargs):
         self.region = region
+        self.kwargs = kwargs
 
     def need_update(self) -> bool:
         """Check if data needs to be updated"""
         latest_data = get_latest_trade_date_ak()
-        local_data = get_local_data_date()
+        local_data = get_local_data_date(self.kwargs["provider_uri"])
         logger.info(f"Latest data date: {latest_data}, Local data date: {local_data}")
         if str(latest_data) == str(local_data):
             return False
