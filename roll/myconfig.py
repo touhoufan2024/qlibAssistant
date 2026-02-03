@@ -177,7 +177,7 @@ RECORD_CONFIG = [
 ]
 
 def get_data_handler_config(
-    start_time="2014-01-01",
+    start_time="2018-01-01",
     end_time="2066-08-01",
     fit_start_time=None, 
     fit_end_time=None,

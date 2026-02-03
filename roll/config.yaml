@@ -16,7 +16,7 @@ sfx_name: s
 model_name: Linear
 dataset_name: Alpha360
 stock_pool: csi300
-step: 40
+step: 60
 
 # rolling_type:sliding
 rolling_type: expanding
