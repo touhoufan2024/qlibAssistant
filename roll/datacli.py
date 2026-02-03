@@ -45,4 +45,4 @@ class DataCLI:
 
     def status(self) -> None:
         """Check local data update status"""
-        logger.info(f"Checking local data status... {get_local_data_date()}")
+        logger.info(f"Checking local data status... {get_local_data_date(self.kwargs['provider_uri'])}")
