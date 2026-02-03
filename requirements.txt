@@ -1,0 +1,18 @@
+# 核心数据处理与量化库
+akshare
+pandas
+numpy
+pyqlib 
+
+# 命令行工具与进度条
+fire 
+tqdm 
+tabulate
+
+# 网络请求与爬虫
+requests
+beautifulsoup4 
+
+# 日志与配置
+loguru 
+PyYAML
