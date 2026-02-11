@@ -29,6 +29,22 @@ jobs:
           ref: main         # 显式指定拉取 main 分支
           fetch-depth: 1    # 只拉取最新一次提交以节省时间
 
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' # 建议使用 '3.12' 匹配最新稳定补丁，若强行指定不存在的版本会报错
+
+      # 3. 安装依赖
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          else
+            echo "⚠️ 警告: 未找到 requirements.txt，跳过安装。"
+          fi
+
+
       - name: 3. Decompress with absolute paths
         run: |
           echo ">>> 检查压缩包是否存在..."
