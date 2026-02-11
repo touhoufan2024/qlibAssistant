@@ -1,0 +1,33 @@
+
+/* 1. 强制页面宽度铺满 */
+.md-grid {
+    max-width: 98% !important;
+}
+.md-main__inner {
+    max-width: 100% !important;
+}
+
+/* 2. 表格容器：允许横向滚动，不换行 */
+.md-typeset table {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* 3. 单元格：保持列宽，防止文字挤压 */
+.md-typeset td, .md-typeset th {
+    min-width: 150px;    /* 每一列最小 150px */
+    white-space: nowrap; /* 强制不换行 */
+    padding: 12px;
+}
+
+/* 4. 固定第一列 (可选，滑动时 ID 列不动) */
+.md-typeset th:first-child, 
+.md-typeset td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: #fff;
+    border-right: 2px solid #eee;
+}
