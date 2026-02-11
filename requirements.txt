@@ -2,7 +2,8 @@
 akshare
 pandas
 numpy
-pyqlib 
+pyqlib
+xgboost
 
 # 命令行工具与进度条
 fire 
