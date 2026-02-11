@@ -1,7 +1,13 @@
 name: Analysis
 
 on:
-  workflow_dispatch: # 允许你手动点击运行
+  # 定时触发
+  schedule:
+    # 分 时 日 月 周 (UTC时间)
+    - cron: '0 13 * * *'
+
+  # 保留手动触发按钮，方便调试
+  workflow_dispatch:
 
 jobs:
   check-home-access:
