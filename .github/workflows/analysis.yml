@@ -22,3 +22,28 @@ jobs:
           
           # 3. 验证解压后的内容
           tail -n1   ~/.qlib/qlib_data/cn_data/calendars/day.txt
+
+      - name: 2. Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main         # 显式指定拉取 main 分支
+          fetch-depth: 1    # 只拉取最新一次提交以节省时间
+
+      - name: 3. Decompress with absolute paths
+        run: |
+          echo ">>> 检查压缩包是否存在..."
+          if [ -f "./roll/qlib_mlruns.tar.gz" ]; then
+            echo "✅ 找到压缩包，开始执行绝对路径解压..."
+            # 使用 sudo 确保有权限写入 /home 或其他系统目录
+            sudo tar --absolute-names -xzf ./roll/qlib_mlruns.tar.gz
+            echo "✅ 解压完成"
+          else
+            echo "❌ 错误: 在 ./roll/ 目录下未找到 qlib_mlruns.tar.gz"
+            exit 1
+          fi
+
+      - name: 4. Verify decompressed files
+        run: |
+          echo ">>> 验证 /home/ash/ 目录下的内容:"
+          # 使用 sudo ls 以防权限限制
+          sudo ls -R /home/ash/.qlibAssistant/mlruns/ || echo "目录尚未创建"
