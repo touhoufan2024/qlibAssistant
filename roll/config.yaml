@@ -31,7 +31,7 @@ predict_dates:
 
 # 模型过滤器配置 (支持正则表达式)
 model_filter:
-  - Alpha158.*csi300
+  - Alpha158.*csi300.*(sliding|expanding)
 
 # 推荐过滤器配置
 rec_filter:
