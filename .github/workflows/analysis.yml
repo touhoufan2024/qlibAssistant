@@ -77,4 +77,5 @@ jobs:
       - name: 5. Run analysis
         run: |
             echo ">>> 运行分析脚本..."
-            cd ./roll && python ./roll.py model ls all=1
+            # cd ./roll && python ./roll.py model ls all=1
+            cd ./roll && python ./roll.py model selection
