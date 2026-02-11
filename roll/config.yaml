@@ -1,0 +1,41 @@
+# 该文件可被命令行输入覆盖
+
+# 文件夹路径配置
+uri_folder: "~/.qlibAssistant/mlruns/"
+analysis_folder: "~/.qlibAssistant/analysis/"
+provider_uri: "~/.qlib/qlib_data/cn_data/"
+
+# 实验命名配置
+pfx_name: p
+sfx_name: s
+
+# 模型与数据集配置
+model_name: Linear
+dataset_name: Alpha360
+stock_pool: csi300
+step: 60
+
+# 滚动类型配置
+# rolling_type: sliding
+rolling_type: expanding
+
+# 股票列表配置
+stock_list:
+  - SH601699
+  - SH601318
+
+# 预测日期区间配置 (替代 test segment)
+predict_dates:
+  - start: 2026-02-03
+    end: 2026-02-03
+
+# 模型过滤器配置 (支持正则表达式)
+model_filter:
+  - Alpha158.*csi300.*(sliding|expanding)
+
+# 推荐过滤器配置
+rec_filter:
+  - ic: 0.1
+  - icir: 0.6
+  - rankic: 0.05
+  - rankicir: 0.02
