@@ -17,3 +17,8 @@ beautifulsoup4
 # 日志与配置
 loguru 
 PyYAML
+
+# page生成
+mkdocs
+mkdocs-material
+mkdocs-table-reader-plugin
