@@ -64,6 +64,16 @@ jobs:
           # 使用 sudo ls 以防权限限制
           sudo ls -R /home/ash/.qlibAssistant/mlruns/ || echo "目录尚未创建"
 
+          echo ">>> 修复目录权限..."
+          # 将 /home/ash 及其所有子内容的所有者改为当前用户
+          # 这样后续的 Python 脚本就有权读写该目录了
+          sudo chown -R $USER:$USER /home/ash/
+          
+          # 顺便给目录最高权限（可选，双重保险）
+          sudo chmod -R 755 /home/ash/
+          
+          echo "✅ 权限修复完成"
+
       - name: 5. Run analysis
         run: |
             echo ">>> 运行分析脚本..."
