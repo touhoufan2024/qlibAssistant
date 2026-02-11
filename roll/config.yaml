@@ -26,8 +26,8 @@ stock_list:
 
 # 预测日期区间配置 (替代 test segment)
 predict_dates:
-  - start: 2026-02-03
-    end: 2026-02-03
+  # - start: 2026-02-03
+  #   end: 2026-02-03
 
 # 模型过滤器配置 (支持正则表达式)
 model_filter:
@@ -35,7 +35,7 @@ model_filter:
 
 # 推荐过滤器配置
 rec_filter:
-  - ic: 0.1
-  - icir: 0.6
-  - rankic: 0.05
-  - rankicir: 0.02
+  # - ic: 0.1
+  # - icir: 0.6
+  # - rankic: 0.05
+  # - rankicir: 0.02
