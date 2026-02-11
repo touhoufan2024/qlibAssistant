@@ -79,3 +79,39 @@ jobs:
             echo ">>> 运行分析脚本..."
             # cd ./roll && python ./roll.py model ls all=1
             cd ./roll && python ./roll.py model selection
+
+      - name: 提交分析结果到 qlib_score 分支
+        run: |
+          # 1. 配置 Git 机器人身份
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 2. 创建临时目录存放要保存的文件 (防止切换分支时被 git checkout 删掉)
+          echo ">>> 正在暂存分析结果..."
+          mkdir -p /tmp/save_results
+          cp -r /home/ash/.qlibAssistant/anilysis/* /tmp/save_results/
+
+          # 3. 切换分支逻辑
+          git fetch origin
+          if git show-ref --quiet refs/remotes/origin/qlib_score; then
+            git checkout qlib_score
+            git pull origin qlib_score
+          else
+            git checkout -b qlib_score
+          fi
+
+          # 4. 将文件放入指定文件夹 qlib_score_csv
+          echo ">>> 正在更新 qlib_score_csv 文件夹..."
+          mkdir -p qlib_score_csv
+          cp -r /tmp/save_results/* qlib_score_csv/
+
+          # 5. 提交并推送
+          git add qlib_score_csv/
+
+          # 检查是否有文件变化，避免空提交报错
+          if git diff --cached --quiet; then
+            echo "今日分析结果无变化，跳过推送。"
+          else
+            git commit -m "自动更新分析评分: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin qlib_score
+          fi
