@@ -1,41 +1,39 @@
 # 该文件可被命令行输入覆盖
 
-# 实验相关配置
-# exp_name: test1222pm
-# task_list:
-#   - my_taskA
-#   - my_taskB
-#   - my_taskC
+# 文件夹路径配置
 uri_folder: "~/.qlibAssistant/mlruns/"
 anilysis_folder: "~/.qlibAssistant/anilysis/"
 provider_uri: "~/.qlib/qlib_data/cn_data/"
 
+# 实验命名配置
 pfx_name: p
 sfx_name: s
 
+# 模型与数据集配置
 model_name: Linear
 dataset_name: Alpha360
 stock_pool: csi300
 step: 60
 
-# rolling_type:sliding
+# 滚动类型配置
+# rolling_type: sliding
 rolling_type: expanding
 
-# 限定股票列表
+# 股票列表配置
 stock_list:
   - SH601699
   - SH601318
-  # - my_test_stockA
 
-# 预测日期区间, 替代 test segment
+# 预测日期区间配置 (替代 test segment)
 predict_dates:
   - start: 2026-02-03
     end: 2026-02-03
 
-# 模型过滤器, 支持正则表达式
+# 模型过滤器配置 (支持正则表达式)
 model_filter:
   - Alpha158.*csi300
 
+# 推荐过滤器配置
 rec_filter:
   - ic: 0.1
   - icir: 0.6
