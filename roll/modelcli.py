@@ -352,13 +352,14 @@ class ModelCLI:
                     ret_df['real_label'] = float('nan')
 
                 # 4. 合并 最新日期详细数据
-                ret_df = pd.merge(
-                    ret_df,
-                    latest_stock_list, 
-                    left_on='instrument', 
-                    right_on='code',
-                    how='left'
-                )
+                if latest_stock_list is not None:
+                    ret_df = pd.merge(
+                        ret_df,
+                        latest_stock_list,
+                        left_on='instrument',
+                        right_on='code',
+                        how='left'
+                    )
 
                 alpha158_df_daily = alpha158_df[alpha158_df['datetime'] == date]
                 # 5. 合并 Alpha158 数据

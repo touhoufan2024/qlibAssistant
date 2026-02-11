@@ -279,12 +279,16 @@ def get_normalized_stock_list() -> pd.DataFrame:
     获取 AkShare 数据并立刻标准化的完整流程
     """
     print("正在从 AkShare 拉取实时行情...")
-    df = ak.stock_info_a_code_name()
-    # df = ak.stock_zh_a_spot()
-    data = df['code'].apply(process_stock_code_v2)
-    df['code'] = data
-    # print(df)
-    return df
+    try:
+        df = ak.stock_info_a_code_name()
+        # df = ak.stock_zh_a_spot()
+        data = df['code'].apply(process_stock_code_v2)
+        df['code'] = data
+        # print(df)
+        return df
+    except Exception as e:
+        logger.error(f"获取股票列表失败: {e}")
+        return None
 
 def get_latest_trade_date_ak():
     # 1. 获取新浪财经的交易日历
