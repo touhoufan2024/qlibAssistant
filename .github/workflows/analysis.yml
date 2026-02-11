@@ -32,13 +32,13 @@ jobs:
       - name: 3. Decompress with absolute paths
         run: |
           echo ">>> 检查压缩包是否存在..."
-          if [ -f "./roll/qlib_mlruns.tar.gz" ]; then
+          if [ -f "./model_pkl/qlib_mlruns.tar.gz" ]; then
             echo "✅ 找到压缩包，开始执行绝对路径解压..."
             # 使用 sudo 确保有权限写入 /home 或其他系统目录
-            sudo tar --absolute-names -xzf ./roll/qlib_mlruns.tar.gz
+            sudo tar --absolute-names -xzf ./model_pkl/qlib_mlruns.tar.gz
             echo "✅ 解压完成"
           else
-            echo "❌ 错误: 在 ./roll/ 目录下未找到 qlib_mlruns.tar.gz"
+            echo "❌ 错误: 在 ./model_pkl/ 目录下未找到 qlib_mlruns.tar.gz"
             exit 1
           fi
 
