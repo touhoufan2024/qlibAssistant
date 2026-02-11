@@ -7,7 +7,7 @@ on:
     paths:
       - 'qlib_score_csv/**' # 监听数据目录
   workflow_run:
-    workflows: ["1-执行脚本生成数据"] # 必须与第一个 Action 的 name 字段完全一致
+    workflows: ["Analysis"] # 必须与第一个 Action 的 name 字段完全一致
     types:
       - completed
 
