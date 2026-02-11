@@ -2,7 +2,7 @@
 
 # 文件夹路径配置
 uri_folder: "~/.qlibAssistant/mlruns/"
-anilysis_folder: "~/.qlibAssistant/anilysis/"
+analysis_folder: "~/.qlibAssistant/analysis/"
 provider_uri: "~/.qlib/qlib_data/cn_data/"
 
 # 实验命名配置

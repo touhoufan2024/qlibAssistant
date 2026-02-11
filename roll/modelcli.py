@@ -156,7 +156,7 @@ class ModelCLI:
                     logger.info(f"Experiment: {name} 删除 Recorder: {rid} ")
                     exp.delete_recorder(rid)
 
-    def anilysis(self, stock_list=None):
+    def analysis(self, stock_list=None):
         """
         模型分析, 问股或者选股
         """
@@ -200,7 +200,7 @@ class ModelCLI:
         """
         问股, 分析股票列表的 score
         """
-        results = self.anilysis(stock_list=self.kwargs.get('stock_list', []))
+        results = self.analysis(stock_list=self.kwargs.get('stock_list', []))
         
         if not results:
             logger.warning("未获取到分析结果 (results is empty).")
@@ -211,7 +211,7 @@ class ModelCLI:
         """
         选股, 分析csi300成分股的 score
         """
-        results = self.anilysis()
+        results = self.analysis()
         
         if not results:
             logger.warning("未获取到分析结果 (results is empty).")
@@ -268,7 +268,7 @@ class ModelCLI:
         print(result_df)
 
         # --- 3. 文件创建 ---
-        base_dir = Path(self.kwargs['anilysis_folder']).expanduser()
+        base_dir = Path(self.kwargs['analysis_folder']).expanduser()
         now_str = datetime.datetime.now().strftime("%Y%m%d_%H_%M_%S")
         save_dir = base_dir / f"{func_name}_{now_str}"
         save_dir.mkdir(parents=True, exist_ok=True)
