@@ -1,0 +1,42 @@
+name: 部署 MkDocs 网页
+
+on:
+  workflow_dispatch:      # 手动触发
+  push:
+    branches: [ qlib_score ] # 监听数据分支
+    paths:
+      - 'qlib_score_csv/**' # 监听数据目录
+  workflow_run:
+    workflows: ["1-执行脚本生成数据"] # 必须与第一个 Action 的 name 字段完全一致
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          ref: qlib_score  # 关键：确保检出的是存放数据的分支
+          fetch-depth: 0
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 运行 MkDocs 构建脚本
+        run: python ./script/gen_page.py
+
+      - name: 部署到 GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site_project/site
