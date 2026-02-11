@@ -1,0 +1,24 @@
+name: Analysis
+
+on:
+  workflow_dispatch: # 允许你手动点击运行
+
+jobs:
+  check-home-access:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. 下载最新qlib_bin.tar.gz
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. 下载名为 qlib_bin.tar.gz 的附件到当前目录
+          gh release download --repo chenditc/investment_data --pattern "qlib_bin.tar.gz"
+
+          # 2. 解压文件
+          echo ">>> 正在解压数据..."
+          mkdir -p ~/.qlib/qlib_data/cn_data
+
+          tar -zxf qlib_bin.tar.gz -C ~/.qlib/qlib_data/cn_data --strip-components=1
+          
+          # 3. 验证解压后的内容
+          tail -n1   ~/.qlib/qlib_data/cn_data/calendars/day.txt
