@@ -17,14 +17,6 @@ from myconfig import get_my_config
 # 假设这是你原本的 RollingTask 类 (保留引用以便调用)
 # from original_rolling import RollingTaskExample 
 
-# 配置 Loguru 样式
-logger.remove()
-logger.add(
-    sys.stderr,
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
-)
-
-
 class RollingTrader:
     """
     ================================================

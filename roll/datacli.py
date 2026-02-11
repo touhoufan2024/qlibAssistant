@@ -8,10 +8,6 @@ from utils import (
     get_local_data_date
 )
 
-# Configure logger
-logger.remove()
-logger.add(sys.stderr, format="{time:HH:mm:ss} | {level: <8} | {message}")
-
 class DataCLI:
     """
     Data management submodule: handles market data download, update and verification

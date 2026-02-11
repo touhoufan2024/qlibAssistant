@@ -23,11 +23,6 @@ from functools import partialmethod
 from pprint import pprint
 import datetime
 from qlib.contrib.data.handler import Alpha158, Alpha360
-logger.remove()
-logger.add(
-    sys.stderr,
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
-)
 from dataclasses import dataclass, field
 from typing import List
 import logging
