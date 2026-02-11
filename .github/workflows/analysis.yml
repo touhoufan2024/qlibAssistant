@@ -89,7 +89,7 @@ jobs:
           # 2. 创建临时目录存放要保存的文件 (防止切换分支时被 git checkout 删掉)
           echo ">>> 正在暂存分析结果..."
           mkdir -p /tmp/save_results
-          cp -r /home/ash/.qlibAssistant/analysis/* /tmp/save_results/
+          cp -r /home/runner/.qlibAssistant/analysis/* /tmp/save_results/
 
           # 3. 切换分支逻辑
           git fetch origin
