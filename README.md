@@ -70,9 +70,14 @@ tar -zxvf qlib_bin.tar.gz -C ~/.qlib/qlib_data/cn_data --strip-components=1
 
 ### 第三步：模型训练
 
+```
+pip install -r requirements.txt
+```
+
+
 ```bash
 # 训练一个基于 Alpha158 因子、沪深300、滑动窗口的 XGBoost 模型
-python ./roll/roll.py --model_names="XGBoost" --dataset_names="Alpha158" --stock_pools="csi300" --rolling_types="sliding"
+python ./roll.py --model_names="XGBoost" --dataset_names="Alpha158" --stock_pools="csi300" --rolling_types="sliding"
 
 ```
 
@@ -80,10 +85,10 @@ python ./roll/roll.py --model_names="XGBoost" --dataset_names="Alpha158" --stock
 
 ```bash
 # 1. 自动预测最新一天 (根据本地数据更新情况)
-python ./roll/roll.py model selection
+python ./roll.py model selection
 
 # 2. 预测指定日期范围 (用于简单回测)
-python ./roll/roll.py model selection --predict_dates='[{"start": "2026-02-02", "end": "2026-02-03"}]'
+python ./roll.py model selection --predict_dates='[{"start": "2026-02-02", "end": "2026-02-03"}]'
 
 ```
 
@@ -131,12 +136,3 @@ python ./roll/roll.py model selection --predict_dates='[{"start": "2026-02-02", 
 如果你有更好的因子建议或者模型优化方案，欢迎提交 Issue 或 Pull Request！
 
 ---
-
-### 💡 润色建议说明：
-
-1. **路径警告**：你提到的路径写死问题是新用户最大的坑，我用 `[!CAUTION]` 高亮标注了。
-2. **公式渲染**：使用 LaTeX 渲染了 Label 的公式，显得更专业。
-3. **对比表格**：原稿中 Alpha158 的对比很不错，但在 README 中如果太长可以简化。我将其核心逻辑融入了“功能模块”中。
-4. **操作指引**：将复杂的描述转化为具体的“第一步、第二步”，降低用户认知负担。
-
-**接下来，你想让我帮你生成一个符合上述路径要求的 `setup.sh` 自动配置脚本吗？**
