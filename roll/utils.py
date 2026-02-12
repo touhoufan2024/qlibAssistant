@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 import akshare as ak
 import pandas as pd
 from loguru import logger
+from pathlib import Path
 
 def check_match(strA: str, strB: str) -> bool:
     """
@@ -330,3 +331,58 @@ def get_latest_trade_date_ak():
 def get_local_data_date(provider_uri):
     code, stdout, stderr = run_command(f"tail -n 1 {provider_uri}/calendars/day.txt")
     return stdout
+
+def fix_mlflow_paths(mlruns_dir=None):
+    """
+    精准替换 MLflow 配置文件中的用户家目录前缀。
+    仅修改 'file:///home/xxx/' 部分，保留后续的所有子路径结构。
+    """
+    # 1. 获取当前环境的 home 路径
+    current_home = str(Path.home())
+    # 构造当前环境的 file 协议前缀
+    current_prefix = f"file://{current_home}"
+
+    if mlruns_dir is None:
+        mlruns_dir = os.path.join(current_home, ".qlibAssistant", "mlruns")
+
+    base_path = Path(mlruns_dir).expanduser().resolve()
+
+    if not base_path.exists():
+        print(f"⚠️ 未发现目录: {base_path}")
+        return
+
+    print(f"🔍 正在执行前缀精准修复...")
+    print(f"🏠 当前 Home 路径: {current_home}")
+
+    fix_count = 0
+    # 正则表达式解释：
+    # 匹配 artifact_location 或 artifact_uri 开头
+    # 后面跟着 file:///home/[任何不包含斜杠的用户名]/
+    # 并捕获后续的所有内容 (.*)
+    pattern = re.compile(r"^(artifact_(?:location|uri)):\s+file:///home/[^/]+/(.*)")
+
+    for root, _, files in os.walk(base_path):
+        if "meta.yaml" in files:
+            yaml_path = os.path.join(root, "meta.yaml")
+
+            try:
+                with open(yaml_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                # 使用正则进行替换
+                # \1 是第一个括号 (键名), \2 是第二个括号 (家目录之后的剩余路径)
+                # 构造出：键名: file:///home/{当前用户}/{剩余路径}
+                new_content, count = pattern.subn(rf"\1: {current_prefix}/\2", content)
+
+                if count > 0:
+                    with open(yaml_path, "w", encoding="utf-8") as f:
+                        f.write(new_content)
+                    fix_count += count
+
+            except Exception as e:
+                print(f"❌ 修复错误 {yaml_path}: {e}")
+
+    if fix_count > 0:
+        print(f"✅ 路径修复完成！共精准替换 {fix_count} 处前缀。")
+    else:
+        print("✨ 检查完毕：路径前缀已匹配当前系统，无需修改。")

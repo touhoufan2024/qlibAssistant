@@ -9,7 +9,7 @@ import os
 from loguru import logger
 import requests
 import subprocess
-from utils import get_local_data_date
+from utils import get_local_data_date, fix_mlflow_paths
 from datacli import DataCLI
 from traincli import TrainCLI
 from modelcli import ModelCLI
@@ -69,14 +69,7 @@ class RollingTrader:
         self.train = TrainCLI(**final_params)
         self.model = ModelCLI(**final_params)
 
-    def test(self):
-        logger.info(self.final_params)
-        cfg = get_my_config(
-            model_name="LightGBM",
-            dataset_name="Alpha158",
-            stock_pool="csi300"
-        )
-        pprint(cfg)
+        fix_mlflow_paths(self.final_params.get("mlruns_dir", None))
 
 
 if __name__ == "__main__":
