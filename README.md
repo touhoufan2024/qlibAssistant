@@ -59,6 +59,13 @@ https://touhoufan2024.github.io/qlibAssistant/
 mkdir -p ~/.qlib/qlib_data/cn_data
 tar -zxvf qlib_bin.tar.gz -C ~/.qlib/qlib_data/cn_data --strip-components=1
 
+
+# 解压自带的 model_pkl , 需要在/home/ash 目录下, 所以需要sudo, 或者自己想办法软连接
+sudo tar --absolute-names -xzf ./model_pkl/qlib_mlruns.tar.gz
+
+# 修复目录权限
+sudo chown -R $USER:$USER /home/ash/          
+sudo chmod -R 755 /home/ash/
 ```
 
 ### 第二步：路径配置 (重要)
