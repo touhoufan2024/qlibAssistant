@@ -31,11 +31,11 @@ def _train_worker(task, exp_name):
     try:
         # 打印 PID 方便观察
         logger.info(f"🔵 [子进程 PID: {os.getpid()}] 开始训练...", flush=True)
-        
+
         # 实例化 Trainer 并开始训练
         trainer = TrainerR(experiment_name=exp_name)
         trainer.train(task)
-        
+
         logger.info(f"🟢 [子进程 PID: {os.getpid()}] 训练完成，准备释放内存。", flush=True)
         os._exit(0)  # 确保子进程正常退出，exitcode 0
     except Exception as e:
@@ -50,14 +50,14 @@ def run_train_blocking(task, exp_name):
     """
     # 1. 创建子进程，目标是上面的 _train_worker 函数
     p = multiprocessing.Process(target=_train_worker, args=(task, exp_name))
-    
+
     # 2. 启动子进程
     p.start()
-    
+
     # 3. 【关键】阻塞主进程，直到子进程结束
     # 此时主进程什么都不干，内存也不会增加，静静等待子进程销毁
     p.join()
-    
+
     logger.info(f"子进程 PID: {p.pid} 已结束，退出代码: {p.exitcode}")
     # 4. 判断子进程是正常结束还是报错挂了
     if p.exitcode == 0:
@@ -70,14 +70,14 @@ def run_train_blocking(task, exp_name):
 def my_enhanced_handler_mod(task, rg):
     # 1. 先调用官方自带的逻辑，帮你处理 end_time 不够长的问题
     default_handler_mod(task, rg)
-    
+
     # 2. 再加上你自己的逻辑，修复 fit_start_time 的占位符问题
     # 获取当前滚动后的 train 时间段
     train_start, train_end = task["dataset"]["kwargs"]["segments"]["train"]
-    
+
     # 获取 handler 配置
     h_kwargs = task["dataset"]["kwargs"]["handler"]["kwargs"]
-    
+
     # 强制覆盖为真实日期
     h_kwargs["fit_start_time"] = train_start
     h_kwargs["fit_end_time"] = train_end
@@ -88,8 +88,8 @@ class TrainCLI:
     """
     def __init__(
         self,
-        exp_name, 
-        step = 40, 
+        exp_name,
+        step = 40,
         region=REG_CN,
         experiment_name="rolling_exp",
         **kwargs
@@ -140,7 +140,6 @@ class TrainCLI:
         step = self.step
         rolling_type = self.kwargs["rolling_type"]
 
-        # exp_name = pfx_name + "_" + model_class + "_" + data_set + "_" + stock_pool + "_" + sfx_name + "_" + time_str
         exp_name = f"{pfx_name}_{model_class}_{data_set}_{stock_pool}_{rolling_type}_step{step}_{sfx_name}_{time_str}"
         print(f"Experiment name: {exp_name}")
 
@@ -163,26 +162,24 @@ class TrainCLI:
             lista = rec.list_artifacts()
             if "params.pkl" not in lista or "sig_analysis" not in lista:
                 continue
-            
+
             task = rec.load_object("task")
             train_time_seg = task["dataset"]["kwargs"]["segments"]["train"]
             exp_train_time_segs_list.append(train_time_seg)
 
         print(f"Already trained time segments in experiment: {len(exp_train_time_segs_list)}")
-        
+
         for idx, task in enumerate(tasks):
             logger.info(f"----- Training task {idx + 1}/{len(tasks)} -----")
             train_time_seg = task["dataset"]["kwargs"]["segments"]["train"]
             print(f"Train time segment: {train_time_seg}")
-            # print(task)
 
             if train_time_seg in exp_train_time_segs_list:
                 logger.info(f"Skipping training for segment {train_time_seg} as it already exists in the experiment.")
                 continue
-            
+
             run_train_blocking(task, exp_name)
             gc.collect()
-            # self.trainer.train(task)
 
     def task_collecting(self):
         print("========== task_collecting ==========")
@@ -194,7 +191,6 @@ class TrainCLI:
             return model_key, rolling_key
 
         def my_filter(recorder):
-            # only choose the results of "LGBModel"
             model_key, rolling_key = rec_key(recorder)
             if model_key == "LGBModel":
                 return True
@@ -225,23 +221,23 @@ class TrainCLI:
                         "class": "Alpha158",
                         "kwargs": {
                             "start_time": "2020-01-01",
-                            "end_time": "2026-08-01", 
+                            "end_time": "2026-08-01",
                             "instruments": "csi300"
                         }
                     },
                     "segments": {
-                        "train": ("2015-01-01", "2016-12-31"), 
+                        "train": ("2015-01-01", "2016-12-31"),
                         "valid": ("2017-01-01", "2017-02-28"),
-                        "test":  ("2017-03-01", "2025-12-31") 
+                        "test":  ("2017-03-01", "2025-12-31")
                     }
                 }
             }
         }
         gen_rolling = RollingGen(
-            step=50, 
+            step=50,
             rtype=RollingGen.ROLL_EX
         )
-        
+
         final_tasks = task_generator(
             tasks=base_task,
             generators=gen_rolling  # 注意顺序，先切时间，再改参数
@@ -250,7 +246,7 @@ class TrainCLI:
         # ==========================================
         # 5. 验证结果
         # ==========================================
-        print(f"最终生成的任务数量: {len(final_tasks)}") 
+        print(f"最终生成的任务数量: {len(final_tasks)}")
         # 预期: 2个时间段 * 2个参数 = 4 个任务
 
         print("\n--- 任务详情 ---")

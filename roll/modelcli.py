@@ -57,9 +57,7 @@ class ModelCLI:
         ic_filter = self.kwargs['rec_filter']
         if not ic_filter:
             return True
-        # print(ic_list, ic_filter)
         all_passed = all(val > list(d.values())[0] for val, d in zip(ic_list, ic_filter))
-        # print("all_passed:", all_passed)
         if not all_passed:
             return False
         return True
@@ -145,7 +143,6 @@ class ModelCLI:
         ic_info, ic_list = self.get_ic_info(rec)
         data_train_vec, train_time_vec = self.get_train_time(rec)
         print("\t", rec.id, task["model"]['class'], task['dataset']['kwargs']['handler']['class'], ic_info, data_train_vec, train_time_vec)
-        # print(task)
 
 
     def ls(self, all=False):
@@ -196,9 +193,7 @@ class ModelCLI:
                 model = rec.load_object("params.pkl")
                 logger.info(f"模型加载成功:{rec.id}")
                 self.print_rec(rec)
-                # print(rec.load_object("task"))
                 dataset_config = task['dataset']
-                # pprint(dataset_config)
 
                 predict_date1 = pd.Timestamp(self.kwargs['predict_dates'][0]['start'])
                 predict_date2 = pd.Timestamp(self.kwargs['predict_dates'][0]['end'])
@@ -206,13 +201,10 @@ class ModelCLI:
                 dataset_config['kwargs']['handler']['kwargs']['end_time'] = predict_date2
                 if stock_list is not None:
                     dataset_config['kwargs']['handler']['kwargs']['instruments'] = stock_list
-                # pprint(dataset_config)
 
                 dataset = init_instance_by_config(dataset_config)
 
                 logger.info("数据集加载成功")
-                # example_df = dataset.prepare("test")
-                # print(example_df.head())
                 pred_score = model.predict(dataset, segment="test")
                 pprint(pred_score)
                 ret.append([mc.exp_name, rid, pred_score])
@@ -267,9 +259,6 @@ class ModelCLI:
         df_final['datetime'] = pd.to_datetime(df_final['datetime'])
         df_final = df_final.sort_values(by='datetime')
 
-        # --- 2. 终端打印 ---
-        # 打印表格 (psql 风格好看)
-        # print(tabulate(df_final, headers='keys', tablefmt='psql', showindex=False))
 
         real_df = self.get_real_label()
         alpha158_df = self.get_alpha_data()
@@ -463,8 +452,6 @@ class ModelCLI:
             end_time = end_time,
             freq='day')
         df.columns = ['real_label']
-        # print(df.info())
-        # print(df)
         return df
 
     def get_alpha_data(self, name="Alpha158"):
@@ -487,7 +474,6 @@ class ModelCLI:
             handler = Alpha360(**handler_kwargs)
 
         # 3. 获取 DataFrame
-        # col_set="feature" 表示只获取特征列，不包含 label
         df = handler.fetch(col_set="feature")
         print(df)
         return df
