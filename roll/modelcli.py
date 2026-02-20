@@ -27,7 +27,8 @@ from dataclasses import dataclass, field
 from typing import List
 import logging
 
-REQUIRED_ARTIFACTS = ["params.pkl", "sig_analysis"]
+PARAMANTS_FILE = "params.pkl"
+REQUIRED_ARTIFACTS = [PARAMANTS_FILE, "sig_analysis"]
 DEFAULT_EXP_NAME = 'Default'
 
 @dataclass
@@ -171,7 +172,7 @@ class ModelCLI:
                 continue
             for rid in exp.list_recorders():
                 rec = exp.get_recorder(recorder_id=rid)
-                if (not rec.list_artifacts()) or ("params.pkl" not in rec.list_artifacts()) or ("sig_analysis" not in rec.list_artifacts()):
+                if (not rec.list_artifacts()) or (PARAMANTS_FILE not in rec.list_artifacts()) or ("sig_analysis" not in rec.list_artifacts()):
                     logger.info(f"Experiment: {name} 删除 Recorder: {rid} ")
                     exp.delete_recorder(rid)
 
@@ -190,7 +191,7 @@ class ModelCLI:
                 rec = exp.get_recorder(recorder_id=rid)
                 task = rec.load_object("task")
 
-                model = rec.load_object("params.pkl")
+                model = rec.load_object(PARAMANTS_FILE)
                 logger.info(f"模型加载成功:{rec.id}")
                 self.print_rec(rec)
                 dataset_config = task['dataset']
