@@ -213,7 +213,6 @@ class ModelCLI:
         label_clean = self.get_real_label().reset_index()[['datetime', 'instrument', 'real_label']]
         label_clean['datetime'] = pd.to_datetime(label_clean['datetime'])
 
-        # 解决 Sonar 报错：显式指定 validate 参数
         result_df = pd.merge(
             df_final,
             label_clean,
@@ -243,6 +242,7 @@ class ModelCLI:
             for date, group_df in df_final.groupby('datetime'):
                 date_str = str(date.date())
                 ret_df = group_df.groupby('instrument')['score'].agg(avg_score='mean', pos_ratio=lambda x: (x > 0).mean()).reset_index()
+                ret_df = ret_df.sort_values(by='avg_score', ascending=False)
                 # 后面逻辑涉及大量 merge，建议在此处也根据实际业务需求考虑是否添加 validate
                 if latest_stock_list is not None:
                     ret_df = pd.merge(ret_df, latest_stock_list, left_on='instrument', right_on='code', how='left')
