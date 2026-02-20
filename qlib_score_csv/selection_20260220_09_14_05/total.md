@@ -1,0 +1,2 @@
+ {'exp_name': 'rolling_exp', 'uri_folder': '~/.qlibAssistant/mlruns/', 'analysis_folder': '~/.qlibAssistant/analysis/', 'provider_uri': '~/.qlib/qlib_data/cn_data/', 'pfx_name': 'p', 'sfx_name': 's', 'model_name': 'Linear', 'dataset_name': 'Alpha360', 'stock_pool': 'csi300', 'step': 60, 'rolling_type': 'expanding', 'stock_list': ['SH601699', 'SH601318'], 'predict_dates': [{'start': '2026-02-13', 'end': '2026-02-13'}], 'model_filter': ['Alpha158.*csi300.*(sliding|expanding)'], 'rec_filter': None}
+
