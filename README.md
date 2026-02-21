@@ -74,6 +74,7 @@ python roll.py data status
 # 训练一个基于 Alpha158 因子、沪深300、滑动窗口的 XGBoost 模型
 python ./roll.py train start --model_names="XGBoost" --dataset_names="Alpha158" --stock_pools="csi300" --rolling_types="sliding" --step=40
 ```
+> train 支持 断点训练, 一套参数 可能会根据 step 分割出 大量模型, 如果一次没训练完, 因为内存等问题导致挂掉, 只要参数相同, 下次可以继续训练, 不需要重新训练已经完成的模型.
 
 ```bash
 # 或者 使用 仓库自带的8个模型
@@ -134,7 +135,7 @@ alpha360是 宏观经济指标集合, 适合使用gpu训练的模型,
 ## ⚠️ 注意事项
 
 * **涨跌幅限制**：Qlib 的模型预测基于数学期望，未考虑 A 股 10% 的涨跌停板机制，Score 可能会出现超过 0.1 的情况。
-* **环境依赖**：目前 `Alpha158` 模型主要在 WSL2 环境下训练，无需 GPU，使用 CPU 即可运行。
+* **环境依赖**：目前 该项目 仅在WSL2 环境下使用 cpu 训练alpha158类的模型, 未测试其他因子和模型, 如果遇到问题请提 issue.
 
 ---
 
