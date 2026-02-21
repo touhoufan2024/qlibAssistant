@@ -210,18 +210,21 @@ class ModelCLI:
         df_final['datetime'] = pd.to_datetime(df_final['datetime'])
         df_final = df_final.sort_values(by='datetime')
 
-        label_clean = self.get_real_label().reset_index()[['datetime', 'instrument', 'real_label']]
+        real_df = self.get_real_label()
+        label_clean = real_df.reset_index()
+        label_clean = label_clean[['datetime', 'instrument', 'real_label']]
+        df_final['datetime'] = pd.to_datetime(df_final['datetime'])
         label_clean['datetime'] = pd.to_datetime(label_clean['datetime'])
-
         result_df = pd.merge(
             df_final,
             label_clean,
             on=['datetime', 'instrument'],
-            how='left',
+            how='left'
         )
         result_df['error'] = result_df['score'] - result_df['real_label']
         result_df['abs_error'] = result_df['error'].abs()
         df_final = result_df
+        print(result_df.head())
 
         self._save_results(df_final, func_name, stock_list, latest_stock_list)
 
@@ -242,8 +245,21 @@ class ModelCLI:
             for date, group_df in df_final.groupby('datetime'):
                 date_str = str(date.date())
                 ret_df = group_df.groupby('instrument')['score'].agg(avg_score='mean', pos_ratio=lambda x: (x > 0).mean()).reset_index()
+
+                cols_to_restore = ['instrument', 'real_label', 'error', 'abs_error']
+                # 确保这些列在 group_df 中确实存在
+                existing_cols = [c for c in cols_to_restore if c in group_df.columns]
+                # 获取唯一的映射关系
+                restore_df = group_df[existing_cols].drop_duplicates('instrument')
+                # 重新合并回来
+                ret_df = pd.merge(
+                    ret_df,
+                    restore_df,
+                    on='instrument',
+                    how='left',
+                    validate='one_to_one'  # 确保一对一，防止重复
+                )
                 ret_df = ret_df.sort_values(by='avg_score', ascending=False)
-                # 后面逻辑涉及大量 merge，建议在此处也根据实际业务需求考虑是否添加 validate
                 if latest_stock_list is not None:
                     ret_df = pd.merge(ret_df, latest_stock_list, left_on='instrument', right_on='code', how='left')
 
