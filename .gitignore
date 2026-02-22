@@ -1,0 +1,4 @@
+# --- 系统与编辑器相关 ---
+.vscode/
+**/__pycache__/
+roll/home
