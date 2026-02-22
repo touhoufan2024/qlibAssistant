@@ -1,4 +1,3 @@
-
 from loguru import logger
 import sys
 import qlib
@@ -88,15 +87,12 @@ class TrainCLI:
     """
     def __init__(
         self,
-        exp_name,
         step = 40,
         region=REG_CN,
-        experiment_name="rolling_exp",
         **kwargs
     ):
         uri_folder = kwargs["uri_folder"]
         provider_uri = kwargs["provider_uri"]
-        self.exp_name = exp_name
         self.step = step
         self.kwargs = kwargs
         exp_manager = C["exp_manager"]
@@ -180,77 +176,3 @@ class TrainCLI:
 
             run_train_blocking(task, exp_name)
             gc.collect()
-
-    def task_collecting(self):
-        print("========== task_collecting ==========")
-
-        def rec_key(recorder):
-            task_config = recorder.load_object("task")
-            model_key = task_config["model"]["class"]
-            rolling_key = task_config["dataset"]["kwargs"]["segments"]["test"]
-            return model_key, rolling_key
-
-        def my_filter(recorder):
-            model_key, rolling_key = rec_key(recorder)
-            if model_key == "LGBModel":
-                return True
-            return False
-
-        collector = RecorderCollector(
-            experiment=self.exp_name,
-            process_list=RollingGroup(),
-            rec_key_func=rec_key,
-            rec_filter_func=my_filter,
-        )
-        print(collector())
-
-    def test(self):
-        base_task = {
-            "model": {
-                "class": "LGBModel",
-                "module_path": "qlib.contrib.model.gbdt",
-                "kwargs": {
-                    "learning_rate": 0.01,  # 默认值，会被覆盖
-                    "num_threads": 20
-                }
-            },
-            "dataset": {
-                "class": "DatasetH",
-                "kwargs": {
-                    "handler": {
-                        "class": "Alpha158",
-                        "kwargs": {
-                            "start_time": "2020-01-01",
-                            "end_time": "2026-08-01",
-                            "instruments": "csi300"
-                        }
-                    },
-                    "segments": {
-                        "train": ("2015-01-01", "2016-12-31"),
-                        "valid": ("2017-01-01", "2017-02-28"),
-                        "test":  ("2017-03-01", "2025-12-31")
-                    }
-                }
-            }
-        }
-        gen_rolling = RollingGen(
-            step=50,
-            rtype=RollingGen.ROLL_EX
-        )
-
-        final_tasks = task_generator(
-            tasks=base_task,
-            generators=gen_rolling  # 注意顺序，先切时间，再改参数
-        )
-
-        # ==========================================
-        # 5. 验证结果
-        # ==========================================
-        print(f"最终生成的任务数量: {len(final_tasks)}")
-        # 预期: 2个时间段 * 2个参数 = 4 个任务
-
-        print("\n--- 任务详情 ---")
-        for i, task in enumerate(final_tasks):
-            lr = task['model']['kwargs']['learning_rate']
-            test_seg = task['dataset']['kwargs']['segments']  # ['test']
-            print(f"Test Segment={test_seg}")
