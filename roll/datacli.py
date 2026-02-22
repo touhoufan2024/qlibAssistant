@@ -37,17 +37,17 @@ class DataCLI:
             self.status()
             return
 
-        proxyA = "https://gh-proxy.org/"
-        proxyB = "https://hk.gh-proxy.org/"
-        proxyC = "https://cdn.gh-proxy.org/"
-        proxyD = "https://edgeone.gh-proxy.org/"
+        proxy_a = "https://gh-proxy.org/"
+        proxy_b = "https://hk.gh-proxy.org/"
+        proxy_c = "https://cdn.gh-proxy.org/"
+        proxy_d = "https://edgeone.gh-proxy.org/"
         url = "https://github.com/chenditc/investment_data/releases/latest/download/qlib_bin.tar.gz"
 
         proxy_map = {
-            "A": proxyA,
-            "B": proxyB,
-            "C": proxyC,
-            "D": proxyD
+            "A": proxy_a,
+            "B": proxy_b,
+            "C": proxy_c,
+            "D": proxy_d
         }
         use_proxy = proxy_map.get(proxy.upper(), proxy)
         wget_cmd = f"wget --no-proxy {use_proxy}{url} -O ~/tmp/qlib_bin.tar.gz"
