@@ -47,6 +47,7 @@ class RollingTrader:
         if not os.path.exists(self.config_path):
             logger.error(f"配置文件未找到: {self.config_path}")
             # 不直接 exit，允许完全通过 CLI 驱动
+            self.params.update(cli_args)
             return
 
         try:
