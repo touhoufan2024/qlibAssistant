@@ -144,3 +144,8 @@ alpha360是 原始时序数据集合, 适合使用gpu训练的模型,
 如果你有更好的因子建议或者模型优化方案，欢迎提交 Issue 或 Pull Request！
 
 ---
+
+## 交流群
+### tg群
+<img width="1185" height="1390" alt="image" src="https://github.com/user-attachments/assets/29877aa5-54f2-4cc0-9dd2-9adcaeb1105f" />
+
