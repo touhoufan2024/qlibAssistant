@@ -261,9 +261,9 @@ class ModelCLI:
                 )
                 ret_df = ret_df.sort_values(by='avg_score', ascending=False)
                 if latest_stock_list is not None:
-                    ret_df = pd.merge(ret_df, latest_stock_list, left_on='instrument', right_on='code', how='left')
+                    ret_df = pd.merge(ret_df, latest_stock_list, left_on='instrument', right_on='code', how='left', validate='one_to_one')
 
-                ret_df = pd.merge(ret_df, alpha158_df[alpha158_df['datetime'] == date], on='instrument', how='left')
+                ret_df = pd.merge(ret_df, alpha158_df[alpha158_df['datetime'] == date], on='instrument', how='left', validate='one_to_one')
                 ret_filter_df = self.filter_ret_df(ret_df)
                 ret_df.to_csv(save_dir / f"{date_str}_ret.csv", index=False, encoding="utf-8-sig")
                 ret_filter_df.to_csv(save_dir / f"{date_str}_filter_ret.csv", index=False, encoding="utf-8-sig")
