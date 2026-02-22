@@ -38,7 +38,7 @@ jobs:
 
       # 4. 执行扫描并将报告路径传给 Sonar
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5 # 建议使用稳定版本
+        uses: SonarSource/sonarqube-scan-action@0303d6b62e310685c0e34d0b9cde218036885c4d
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
