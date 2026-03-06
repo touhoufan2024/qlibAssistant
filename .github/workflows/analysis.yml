@@ -60,7 +60,6 @@ jobs:
         run: |
           echo ">>> 验证 ~ 目录下的内容:"
           ls -R ~/.qlibAssistant || echo "目录尚未创建"
-          tree /home
 
 
       - name: 5. Run analysis
