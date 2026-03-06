@@ -59,7 +59,7 @@ jobs:
       - name: 4. Verify decompressed files
         run: |
           echo ">>> 验证 ~ 目录下的内容:"
-          ls -R ~/.qlibAssistant/mlruns/ || echo "目录尚未创建"
+          ls -R ~/.qlibAssistant || echo "目录尚未创建"
 
 
       - name: 5. Run analysis
