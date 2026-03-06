@@ -262,7 +262,7 @@ class ModelCLI:
 
     def _save_results(self, df_final, func_name, stock_list, latest_stock_list):
         base_dir = Path(self.kwargs['analysis_folder']).expanduser()
-        save_dir = base_dir / f"{func_name}_{datetime.datetime.now().strftime('%Y%m%d_%H_%M_%S')}"
+        save_dir = base_dir / f"{func_name}_{datetime.now().strftime('%Y%m%d_%H_%M_%S')}"
         save_dir.mkdir(parents=True, exist_ok=True)
         md_file = save_dir / "total.md"
 

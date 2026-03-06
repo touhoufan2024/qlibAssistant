@@ -14,7 +14,7 @@ from pathlib import Path
 from myconfig import get_my_config
 import os
 from pprint import pprint
-import datetime
+from datetime import datetime
 import gc
 import multiprocessing
 from tqdm import tqdm
@@ -130,7 +130,7 @@ class TrainCLI:
         model_class = task["model"]["class"]
         data_set = task["dataset"]["kwargs"]["handler"]["class"]
 
-        now = datetime.datetime.now()
+        now = datetime.now()
         time_str = now.strftime("%Y%m%d_%H")
 
         pfx_name = self.kwargs['pfx_name']
