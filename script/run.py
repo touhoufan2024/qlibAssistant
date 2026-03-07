@@ -8,7 +8,7 @@ def run_batch_experiments():
     model_names = ["XGBoost", "Linear", "DoubleEnsemble", "LightGBM"]
     dataset_names = ["Alpha158"] #, "Alpha360"]
     stock_pools = ["csi300"] #, "csi500"]
-    rolling_types = ["sliding", "expanding"]
+    rolling_types = ["custom"]
 
     # 2. 生成所有组合 (笛卡尔积)
     # 4 * 2 * 2 * 2 = 32 个任务
@@ -30,7 +30,7 @@ def run_batch_experiments():
             f'--dataset_name="{dataset}" '
             f'--stock_pool="{pool}" '
             f'--rolling_type="{r_type}" '
-            f'train start'
+            f'train start_custom'
         )
 
         logger.info(f"[{current_idx}/{total_tasks}] 正在执行: {cmd}")
