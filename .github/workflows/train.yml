@@ -1,5 +1,8 @@
 name: Train model
 
+permissions:
+  contents: write
+
 on:
   # 定时触发
   schedule:
@@ -53,63 +56,48 @@ jobs:
       - name: Run Train
         run: |
           echo "开始 train "
-          # cd ./roll && python ./roll.py --pfx_name="EXP" --model_name="LightGBM" --dataset_name="Alpha158" --stock_pool="csi300" --rolling_type="custom" train start_custom
-          cd ./roll && python ../script/run.py
+          cd ./roll && python ./roll.py --pfx_name="EXP" --model_name="LightGBM" --dataset_name="Alpha158" --stock_pool="csi300" --rolling_type="custom" train start_custom
+          # cd ./roll && python ../script/run.py
 
       - name: LS model
         run: |
           echo "model ls "
           cd ./roll && python ./roll.py model ls all=1 
         
+      - name: compress model
+        run: |
+          echo "compress model pkl "
+          cd ./roll && python ./roll.py model compress_mlruns 
 
-      # - name: 3. Decompress with absolute paths
-      #   run: |
-      #     echo ">>> 解压模型pkl..."
-      #     cd ./roll && python ./roll.py model decompress_mlruns
+      - name: Commit and Push Model Files
+        run: |
+          # 1. 配置 Git 用户信息（使用 GitHub Actions Bot 的默认身份）
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 2. 检查是否有新生成的压缩包并添加
+          # 假设你的压缩包在 model_pkl 目录下
+          git add model_pkl/*.tar.gz
+          
+          # 3. 提交更改
+          # 使用 [skip ci] 防止触发死循环，并加上当前日期作为备注
+          git commit -m "Auto-update trained models $(date +'%Y-%m-%d') [skip ci]" || echo "No changes to commit"
+          
+          # 4. 推送到当前分支
+          git push
 
-      # - name: 4. Verify decompressed files
-      #   run: |
-      #     echo ">>> 验证 ~ 目录下的内容:"
-      #     ls -R ~/.qlibAssistant || echo "目录尚未创建"
-
-
-      # - name: 5. Run analysis
-      #   run: |
-      #       echo ">>> 运行分析脚本..."
-      #       cd ./roll && python ./roll.py model ls all=1 && python ./roll.py model selection
-
-      # - name: 提交分析结果到 qlib_score 分支
-      #   run: |
-      #     # 1. 配置 Git 机器人身份
-      #     git config --global user.name "github-actions[bot]"
-      #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      #     # 2. 创建临时目录存放要保存的文件 (防止切换分支时被 git checkout 删掉)
-      #     echo ">>> 正在暂存分析结果..."
-      #     mkdir -p /tmp/save_results
-      #     cp -r /home/runner/.qlibAssistant/analysis/* /tmp/save_results/
-
-      #     # 3. 切换分支逻辑
-      #     git fetch origin
-      #     if git show-ref --quiet refs/remotes/origin/qlib_score; then
-      #       git checkout qlib_score
-      #       git pull origin qlib_score
-      #     else
-      #       git checkout -b qlib_score
-      #     fi
-
-      #     # 4. 将文件放入指定文件夹 qlib_score_csv
-      #     echo ">>> 正在更新 qlib_score_csv 文件夹..."
-      #     mkdir -p qlib_score_csv
-      #     cp -r /tmp/save_results/* qlib_score_csv/
-
-      #     # 5. 提交并推送
-      #     git add qlib_score_csv/
-
-      #     # 检查是否有文件变化，避免空提交报错
-      #     if git diff --cached --quiet; then
-      #       echo "今日分析结果无变化，跳过推送。"
-      #     else
-      #       git commit -m "自动更新分析评分: $(date +'%Y-%m-%d %H:%M:%S')"
-      #       git push origin qlib_score
-      #     fi
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          # 使用日期作为 Tag 名称，例如 2026-03-07
+          tag_name: model-release-${{ github.event.schedule || 'manual' }}-${{ github.run_id }}
+          name: Model Release $(date +'%Y-%m-%d')
+          body: |
+            自动训练模型发布
+            - 训练日期: $(date +'%Y-%m-%d')
+            - 任务 ID: ${{ github.run_id }}
+          # 指定你的压缩包路径，支持通配符
+          files: |
+            model_pkl/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
