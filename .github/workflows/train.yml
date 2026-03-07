@@ -1,0 +1,114 @@
+name: Train model
+
+on:
+  # 定时触发
+  schedule:
+    # 分 时 日 月 周 (UTC时间)
+    - cron: '0 13 * * *'
+
+  # 保留手动触发按钮，方便调试
+  workflow_dispatch:
+
+jobs:
+  check-home-access:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. 下载最新qlib_bin.tar.gz
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. 下载名为 qlib_bin.tar.gz 的附件到当前目录
+          gh release download --repo chenditc/investment_data --pattern "qlib_bin.tar.gz"
+
+          # 2. 解压文件
+          echo ">>> 正在解压数据..."
+          mkdir -p ~/.qlib/qlib_data/cn_data
+
+          tar -zxf qlib_bin.tar.gz -C ~/.qlib/qlib_data/cn_data --strip-components=1
+          
+          # 3. 验证解压后的内容
+          tail -n1   ~/.qlib/qlib_data/cn_data/calendars/day.txt
+
+      - name: 2. Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main         # 显式指定拉取 main 分支
+          fetch-depth: 1    # 只拉取最新一次提交以节省时间
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' # 建议使用 '3.12' 匹配最新稳定补丁，若强行指定不存在的版本会报错
+
+      # 3. 安装依赖
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          else
+            echo "⚠️ 警告: 未找到 requirements.txt，跳过安装。"
+          fi
+
+      - name: Run Train
+        run: |
+          echo "开始 train "
+          cd ./roll && python ./roll.py --pfx_name="EXP" --model_name="LightGBM" --dataset_name="Alpha158" --stock_pool="csi300" --rolling_type="custom" train start_custom
+
+      - name: LS model
+        run: |
+          echo "model ls "
+          cd ./roll && python ./roll.py model ls all=1 
+        
+
+      # - name: 3. Decompress with absolute paths
+      #   run: |
+      #     echo ">>> 解压模型pkl..."
+      #     cd ./roll && python ./roll.py model decompress_mlruns
+
+      # - name: 4. Verify decompressed files
+      #   run: |
+      #     echo ">>> 验证 ~ 目录下的内容:"
+      #     ls -R ~/.qlibAssistant || echo "目录尚未创建"
+
+
+      # - name: 5. Run analysis
+      #   run: |
+      #       echo ">>> 运行分析脚本..."
+      #       cd ./roll && python ./roll.py model ls all=1 && python ./roll.py model selection
+
+      # - name: 提交分析结果到 qlib_score 分支
+      #   run: |
+      #     # 1. 配置 Git 机器人身份
+      #     git config --global user.name "github-actions[bot]"
+      #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      #     # 2. 创建临时目录存放要保存的文件 (防止切换分支时被 git checkout 删掉)
+      #     echo ">>> 正在暂存分析结果..."
+      #     mkdir -p /tmp/save_results
+      #     cp -r /home/runner/.qlibAssistant/analysis/* /tmp/save_results/
+
+      #     # 3. 切换分支逻辑
+      #     git fetch origin
+      #     if git show-ref --quiet refs/remotes/origin/qlib_score; then
+      #       git checkout qlib_score
+      #       git pull origin qlib_score
+      #     else
+      #       git checkout -b qlib_score
+      #     fi
+
+      #     # 4. 将文件放入指定文件夹 qlib_score_csv
+      #     echo ">>> 正在更新 qlib_score_csv 文件夹..."
+      #     mkdir -p qlib_score_csv
+      #     cp -r /tmp/save_results/* qlib_score_csv/
+
+      #     # 5. 提交并推送
+      #     git add qlib_score_csv/
+
+      #     # 检查是否有文件变化，避免空提交报错
+      #     if git diff --cached --quiet; then
+      #       echo "今日分析结果无变化，跳过推送。"
+      #     else
+      #       git commit -m "自动更新分析评分: $(date +'%Y-%m-%d %H:%M:%S')"
+      #       git push origin qlib_score
+      #     fi
