@@ -53,6 +53,12 @@ jobs:
             echo "⚠️ 警告: 未找到 requirements.txt，跳过安装。"
           fi
 
+      - name: delete old model pkl
+        run: |
+          echo "删掉旧模型"
+          rm ./model_pkl/*.tar.gz
+          git add -u
+
       - name: Run Train
         run: |
           echo "开始 train "
