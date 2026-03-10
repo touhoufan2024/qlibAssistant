@@ -33,6 +33,8 @@ jobs:
           cache-dependency-path: page/package-lock.json
 
       - name: 构建 VitePress
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           cd page
           npm ci
