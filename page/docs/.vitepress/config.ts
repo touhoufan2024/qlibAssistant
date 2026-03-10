@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
+  metaChunk: true,
   title: 'qlib csi300 score',
   description: 'qlib 量化选股评分数据展示',
   lang: 'zh-CN',

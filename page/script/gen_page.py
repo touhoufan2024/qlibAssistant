@@ -4,6 +4,7 @@
 所有 CSV 转为 Markdown 表格，MD 文件直接引用。
 """
 import csv
+import os
 from pathlib import Path
 
 # 路径配置：page/script/gen_page.py -> 项目根目录
@@ -57,6 +58,10 @@ def generate_pages() -> None:
 
     sidebar_items = []
     subdirs = sorted([d for d in DATA_DIR.iterdir() if d.is_dir()], reverse=True)
+    limit = os.environ.get('GEN_PAGE_LIMIT')
+    if limit:
+        subdirs = subdirs[: int(limit)]
+        print(f'[CI] 限制展示最近 {limit} 个子目录')
 
     # 根 index
     index_lines = ['# qlib csi300 score\n', '自动扫描的数据目录。\n']

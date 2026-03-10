@@ -34,7 +34,8 @@ jobs:
 
       - name: 构建 VitePress
         env:
-          NODE_OPTIONS: --max-old-space-size=4096
+          NODE_OPTIONS: --max-old-space-size=6144
+          GEN_PAGE_LIMIT: "25"
         run: |
           cd page
           npm ci
