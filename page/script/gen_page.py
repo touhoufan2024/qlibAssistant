@@ -5,6 +5,7 @@
 """
 import csv
 import os
+import re
 from pathlib import Path
 
 # 路径配置：page/script/gen_page.py -> 项目根目录
@@ -153,9 +154,10 @@ def update_sidebar(items: list) -> None:
     items_str = ',\n      '.join(
         f"{{ text: '{esc(i['text'])}', link: '{i['link']}' }}" for i in items
     )
-    old = "items: [], // 由 gen_page.py 动态生成"
-    new = f"items: [{items_str}]"
-    new_content = content.replace(old, new)
+    new_items = f"items: [{items_str}]"
+    # 使用正则替换，兼容：1) 占位符 items: []  2) 已被替换过的旧 items: [...]
+    pattern = r"items:\s*\[[\s\S]*?\]"
+    new_content = re.sub(pattern, new_items, content, count=1)
     config_path.write_text(new_content, encoding='utf-8')
 
 
