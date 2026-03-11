@@ -4,10 +4,10 @@ permissions:
   contents: write
 
 on:
-  # 定时触发
+  # 定时触发（避开整点，GitHub 整点负载高易导致任务被丢弃）
   schedule:
-    # 分 时 日 月 周 (UTC时间)
-    - cron: '0 12 * * *'
+    # 分 时 日 月 周 (UTC时间) → 中国时间 20:05
+    - cron: '5 12 * * *'
 
   # 保留手动触发按钮，方便调试
   workflow_dispatch:
