@@ -12,8 +12,8 @@ export default defineConfig({
     ],
     nav: [
       { text: '首页', link: '/' },
-      { text: 'qlib中文教程', link: '/pages/notes/' },
-      { text: '文档', link: '/pages/essays/' },
+      { text: '文档', link: '/pages/notes/' },
+      { text: '随笔', link: '/pages/essays/' },
       { text: '帮助', link: '/pages/about' },
     ],
     sidebar: [

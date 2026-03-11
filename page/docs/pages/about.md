@@ -1,5 +1,7 @@
 # 帮助
 
+这个页面是每日预测的使用说明
+
 ## 项目简介
 
 本项目通过 GitHub Actions 实现**每日自动化 CI 流程**：每晚 10 点触发，自动从 [chenditc/investment_data](https://github.com/chenditc/investment_data) 拉取最新 A 股数据，完成模型训练与选股预测。

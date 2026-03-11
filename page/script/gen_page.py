@@ -127,8 +127,8 @@ def generate_pages() -> None:
 
 
 def generate_notes_essays_index() -> None:
-    """扫描 pages/notes 和 pages/essays 下的 .md 文件，生成索引页"""
-    for subdir_name, title in [('notes', '笔记'), ('essays', '随笔')]:
+    """扫描 pages/notes 和 pages/essays 下的 .md 文件，生成索引页（标题与 nav 一致）"""
+    for subdir_name, title in [('notes', '文档'), ('essays', '随笔')]:
         subdir = DOCS_DIR / 'pages' / subdir_name
         ensure_dir(subdir)
         md_files = [
