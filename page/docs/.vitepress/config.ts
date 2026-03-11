@@ -14,6 +14,7 @@ export default defineConfig({
       { text: '首页', link: '/' },
       { text: '文档', link: '/pages/notes/' },
       { text: '随笔', link: '/pages/essays/' },
+      { text: '马后炮', link: '/pages/mahoupao' },
       { text: '帮助', link: '/pages/about' },
     ],
     sidebar: [
