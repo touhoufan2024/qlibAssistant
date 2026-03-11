@@ -12,15 +12,16 @@ export default defineConfig({
     ],
     nav: [
       { text: '首页', link: '/' },
-      { text: '笔记', link: '/pages/notes/' },
-      { text: '随笔', link: '/pages/essays/' },
-      { text: '关于', link: '/pages/about' },
+      { text: 'qlib中文教程', link: '/pages/notes/' },
+      { text: '文档', link: '/pages/essays/' },
+      { text: '帮助', link: '/pages/about' },
     ],
     sidebar: [
       {
         text: '数据目录',
         link: '/',
-        items: [{ text: 'selection_20260309_15_48_03', link: '/score/selection_20260309_15_48_03/' },
+        items: [{ text: 'selection_20260310_17_37_47', link: '/score/selection_20260310_17_37_47/' },
+      { text: 'selection_20260309_15_48_03', link: '/score/selection_20260309_15_48_03/' },
       { text: 'selection_20260308_21_11_10', link: '/score/selection_20260308_21_11_10/' },
       { text: 'selection_20260308_18_24_44', link: '/score/selection_20260308_18_24_44/' },
       { text: 'selection_20260308_16_54_35', link: '/score/selection_20260308_16_54_35/' },
@@ -57,11 +58,37 @@ export default defineConfig({
       { text: 'selection_20260213_14_16_00', link: '/score/selection_20260213_14_16_00/' },
       { text: 'selection_20260212_14_25_13', link: '/score/selection_20260212_14_25_13/' },
       { text: 'selection_20260211_18_07_57', link: '/score/selection_20260211_18_07_57/' },
-      { text: 'selection_20260211_17_29_45', link: '/score/selection_20260211_17_29_45/' }]
+      { text: 'selection_20260211_17_29_45', link: '/score/selection_20260211_17_29_45/' }],
       },
     ],
     outline: {
       level: [2, 3],
+    },
+    footer: {
+      message: (() => {
+        const now = new Date()
+        const dateTime = now.toLocaleString('zh-CN', {
+          timeZone: 'UTC',
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }) + ' UTC'
+        const parts = [`生成日期: ${dateTime}`]
+        const os =
+          process.env.RUNNER_OS ||
+          process.env.OS ||
+          { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] ||
+          process.platform
+        const runId = process.env.GITHUB_RUN_ID
+        parts.push(`运行环境: ${os}`)
+        if (runId) parts.push(`构建 ID: ${runId}`)
+        parts.push(`Node: ${process.version}`)
+        return parts.join(' · ')
+      })(),
     },
   },
   markdown: {

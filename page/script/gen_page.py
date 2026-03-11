@@ -143,11 +143,13 @@ def generate_notes_essays_index() -> None:
 
 
 def update_sidebar(items: list) -> None:
-    """更新 vitepress 配置中的 sidebar"""
+    """更新 vitepress 配置中的 sidebar（当 sidebar 为 false 时跳过）"""
     config_path = DOCS_DIR / '.vitepress' / 'config.ts'
     if not config_path.exists():
         return
     content = config_path.read_text(encoding='utf-8')
+    if 'sidebar: false' in content:
+        return
 
     def esc(s: str) -> str:
         return s.replace("'", "\\'").replace('\\', '\\\\')

@@ -1,3 +1,29 @@
+/* 侧边栏收起状态 - 使用 display:none 确保完全隐藏 */
+@media (min-width: 960px) {
+  html.sidebar-collapsed .VPSidebar {
+    display: none !important;
+  }
+  html.sidebar-collapsed .VPContent.has-sidebar {
+    padding-left: 32px !important;
+  }
+  html.sidebar-collapsed .VPNavBar.has-sidebar .title {
+    padding-left: 16px !important;
+    width: auto !important;
+  }
+  html.sidebar-collapsed .VPNavBar.has-sidebar .content,
+  html.sidebar-collapsed .VPNavBar.has-sidebar .divider {
+    padding-left: 16px !important;
+  }
+  html.sidebar-collapsed .VPLocalNav.has-sidebar {
+    padding-left: 16px !important;
+  }
+}
+
+/* 强制显示页脚（与侧边栏同时显示） */
+footer.VPFooter {
+  display: block !important;
+}
+
 /* 流体布局：随窗口宽度自适应，避免最大化时变形 */
 :root {
   --vp-layout-max-width: 2560px;
