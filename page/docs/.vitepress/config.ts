@@ -7,10 +7,14 @@ export default defineConfig({
   description: 'qlib 量化选股评分数据展示',
   lang: 'zh-CN',
   themeConfig: {
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/touhoufan2024/qlibAssistant' },
+    ],
     nav: [
       { text: '首页', link: '/' },
-      { text: 'qlib中文教程', link: '/pages/notes/' },
-      { text: '文档', link: '/pages/essays/' },
+      { text: '文档', link: '/pages/notes/' },
+      { text: '随笔', link: '/pages/essays/' },
+      { text: '马后炮', link: '/pages/mahoupao' },
       { text: '帮助', link: '/pages/about' },
     ],
     sidebar: [
