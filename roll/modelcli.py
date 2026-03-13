@@ -50,6 +50,7 @@ class ModelCLI:
         self.kwargs = kwargs
         self._init_qlib(region)
         self.review_result_string = "# 复盘统计分析\n"
+        self.review_result_string += f"\n 统计时间 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
 
     def _init_qlib(self, region):
         """初始化 Qlib 配置"""
