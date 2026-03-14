@@ -53,6 +53,21 @@ jobs:
             echo "⚠️ 警告: 未找到 requirements.txt，跳过安装。"
           fi
 
+      - name: Check if need to train
+        id: need_train_check
+        run: |
+          echo "检查是否需要训练"
+          cd ./roll && python ./roll.py train need_train > ../need_train_result.txt
+          cd ..
+          NEED_TRAIN=$(tail -n1 need_train_result.txt)
+          echo "NEED_TRAIN_RESULT=$NEED_TRAIN" >> $GITHUB_ENV
+
+      - name: Exit if not need training
+        if: env.NEED_TRAIN_RESULT == 'False'
+        run: |
+          echo "不需要训练，直接中断 workflow。"
+          exit 1
+
       - name: delete old model pkl
         run: |
           echo "删掉旧模型"
