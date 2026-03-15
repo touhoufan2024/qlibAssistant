@@ -1,4 +1,4 @@
-# --- 系统与编辑器相关 ---
+qlib_score_csv/
 .vscode/
 **/__pycache__/
 roll/home
@@ -10,5 +10,3 @@ page/docs/.vitepress/cache/
 # 以下由 gen_page 生成，部署时自动构建
 page/docs/index.md
 page/docs/score/
-page/docs/pages/notes/index.md
-page/docs/pages/essays/index.md

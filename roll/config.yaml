@@ -36,7 +36,7 @@ model_filter:
 
 # 推荐过滤器配置
 rec_filter:
-  - ic: 0.03
-  - icir: 0.3
+  - ic: 0.02
+  - icir: 0.25
   - rankic: 0.02
   - rankicir: 0.2

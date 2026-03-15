@@ -12,6 +12,7 @@ on:
 jobs:
   check-home-access:
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     steps:
       - name: 1. 下载最新qlib_bin.tar.gz
         env:
@@ -92,8 +93,8 @@ jobs:
           mkdir -p qlib_score_csv
           cp -r /tmp/save_results/* qlib_score_csv/
 
-          # 5. 提交并推送
-          git add qlib_score_csv/
+          # 5. 提交并推送 (-f 强制添加，因 .gitignore 中已忽略该目录)
+          git add -f qlib_score_csv/
 
           # 检查是否有文件变化，避免空提交报错
           if git diff --cached --quiet; then

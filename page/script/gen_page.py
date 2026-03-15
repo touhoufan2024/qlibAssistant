@@ -118,28 +118,88 @@ def generate_pages() -> None:
             sub_index.append(f'- [{base_name}](/{rel}/{base_name})\n')
         (out_dir / 'index.md').write_text(''.join(sub_index), encoding='utf-8')
 
-    # 扫描并生成笔记、随笔索引
-    generate_notes_essays_index()
+    # 自动生成 pages 子页面链接和侧边栏（用户只需增删 md 文件）
+    generate_pages_auto()
 
-    # 更新 vitepress 侧边栏
+    # 更新 vitepress 侧边栏（数据目录）
     update_sidebar(sidebar_items)
     print(f'生成完成: {DOCS_DIR}')
 
 
-def generate_notes_essays_index() -> None:
-    """扫描 pages/notes 和 pages/essays 下的 .md 文件，生成索引页（标题与 nav 一致）"""
-    for subdir_name, title in [('notes', '文档'), ('essays', '随笔')]:
-        subdir = DOCS_DIR / 'pages' / subdir_name
-        ensure_dir(subdir)
+# pages 下各文件夹的显示名称（与 nav 一致）
+PAGES_TITLES: dict[str, str] = {
+    'about': '帮助',
+    'docs': '文档',
+    'essays': '随笔',
+    'mahoupao': '马后炮',
+}
+
+
+def _get_md_title(md_path: Path) -> str:
+    """从 md 文件第一行 # 标题 提取显示名，否则用文件名"""
+    try:
+        text = md_path.read_text(encoding='utf-8', errors='ignore').strip()
+        for line in text.split('\n')[:5]:
+            line = line.strip()
+            if line.startswith('# '):
+                return line[2:].strip()
+    except Exception:
+        pass
+    return md_path.stem
+
+
+def generate_pages_auto() -> None:
+    """
+    扫描 pages 下各子目录的 .md 文件，自动生成侧边栏配置。
+    用户只需增删 md 文件，运行 gen 后侧边栏自动更新。
+    """
+    pages_dir = DOCS_DIR / 'pages'
+    if not pages_dir.exists():
+        return
+
+    pages_sidebar: dict[str, list[dict[str, str]]] = {}
+
+    for subdir in sorted(pages_dir.iterdir()):
+        if not subdir.is_dir():
+            continue
+        subdir_name = subdir.name
+        title = PAGES_TITLES.get(subdir_name, subdir_name)
+
         md_files = [
             f for f in subdir.iterdir()
             if f.is_file() and f.suffix == '.md' and f.name != 'index.md'
         ]
-        lines = [f'# {title}\n\n']
-        for f in sorted(md_files, key=lambda x: x.stem, reverse=True):
-            name = f.stem
-            lines.append(f'- [{name}](/pages/{subdir_name}/{name})\n')
-        (subdir / 'index.md').write_text(''.join(lines), encoding='utf-8')
+        md_files = sorted(md_files, key=lambda x: x.stem)
+
+        # 只生成侧边栏，不修改 index.md 正文
+        rel_path = f'/pages/{subdir_name}'
+        sidebar_items = [
+            {'text': title, 'link': f'{rel_path}/'},
+        ]
+        for f in md_files:
+            display = _get_md_title(f)
+            sidebar_items.append({'text': display, 'link': f'{rel_path}/{f.stem}'})
+
+        # GitHub Pages 部署时 route 含 base，需两种 key 以兼容 dev 与 prod
+        pages_sidebar[f'{rel_path}/'] = sidebar_items
+        pages_sidebar[f'/qlibAssistant{rel_path}/'] = sidebar_items
+
+    # 写入 sidebar-pages.generated.ts
+    _write_sidebar_pages(pages_sidebar)
+
+
+def _write_sidebar_pages(pages_sidebar: dict[str, list[dict[str, str]]]) -> None:
+    """生成 .vitepress/sidebar-pages.generated.ts"""
+    out = DOCS_DIR / '.vitepress' / 'sidebar-pages.generated.ts'
+    lines = ["/** 由 gen_page.py 自动生成，请勿手动修改 */\n", "export const pagesSidebar = {\n"]
+    for path, items in pages_sidebar.items():
+        lines.append(f"  '{path}': [")
+        for it in items:
+            t = it['text'].replace("'", "\\'").replace('\\', '\\\\')
+            lines.append(f"    {{ text: '{t}', link: '{it['link']}' }},")
+        lines.append('  ],')
+    lines.append('}\n')
+    out.write_text('\n'.join(lines), encoding='utf-8')
 
 
 def update_sidebar(items: list) -> None:

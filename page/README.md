@@ -11,8 +11,8 @@ page/
 │   ├── index.md          # 首页
 │   ├── score/            # 各 selection 子目录
 │   └── pages/            # 用户页面（保留）
-│       ├── notes/        # 笔记：新建 .md 后运行 gen 自动生成索引
-│       ├── essays/       # 随笔：同上
+│       ├── docs.md       # 文档（单页，类似帮助）
+│       ├── essays/       # 随笔：新建 .md 后运行 gen 自动生成索引
 │       └── about.md      # 关于页
 ├── script/
 │   └── gen_page.py       # 扫描并生成页面
@@ -20,9 +20,9 @@ page/
 └── README.md
 ```
 
-## 笔记与随笔
+## 随笔
 
-在 `docs/pages/notes/` 或 `docs/pages/essays/` 下新建 `.md` 文件，运行 `npm run gen` 后会自动出现在对应列表中。
+在 `docs/pages/essays/` 下新建 `.md` 文件，运行 `npm run gen` 后会自动出现在对应列表中。文档（`docs.md`）为单页，与帮助页类似，直接编辑即可。
 
 ## 使用
 

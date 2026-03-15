@@ -1,0 +1,84 @@
+
+name: Review
+
+on:
+  workflow_run:
+    workflows: ["Analysis"] # 必须与第一个 Action 的 name 字段完全一致
+    types:
+      - completed
+
+  # 保留手动触发按钮，方便调试
+  workflow_dispatch:
+
+jobs:
+  check-home-access:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: 1. 下载最新qlib_bin.tar.gz
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. 下载名为 qlib_bin.tar.gz 的附件到当前目录
+          gh release download --repo chenditc/investment_data --pattern "qlib_bin.tar.gz"
+
+          # 2. 解压文件
+          echo ">>> 正在解压数据..."
+          mkdir -p ~/.qlib/qlib_data/cn_data
+
+          tar -zxf qlib_bin.tar.gz -C ~/.qlib/qlib_data/cn_data --strip-components=1
+          
+          # 3. 验证解压后的内容
+          tail -n1   ~/.qlib/qlib_data/cn_data/calendars/day.txt
+
+      - name: 2. Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main         # 显式指定拉取 main 分支
+          fetch-depth: 1    # 只拉取最新一次提交以节省时间
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' # 建议使用 '3.12' 匹配最新稳定补丁，若强行指定不存在的版本会报错
+
+      # 3. 安装依赖
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          else
+            echo "⚠️ 警告: 未找到 requirements.txt，跳过安装。"
+          fi
+
+      - name: 从 qlib_score 拉取数据
+        run: |
+          git fetch origin qlib_score
+          git checkout origin/qlib_score -- qlib_score_csv || mkdir -p qlib_score_csv
+          git restore --staged qlib_score_csv 2>/dev/null || true
+
+      - name: 5. Run analysis
+        run: |
+            echo ">>> 运行分析脚本..."
+            cd ./roll && python ./roll.py model review
+
+            # 将分析结果文件复制到指定目录，并提交
+            mkdir -p ../page/docs/pages/mahoupao
+            cp /tmp/review_result.md ../page/docs/pages/mahoupao/review_result.md
+
+            # 拉取最新代码防止冲突
+            git pull origin main || true
+
+            # 配置 Git 用户身份
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+            # 添加并提交变更，避免空提交出错
+            git add -f ../page/docs/pages/mahoupao/review_result.md
+            if git diff --cached --quiet; then
+              echo "review_result.md 没有变化，跳过提交。"
+            else
+              git commit -m "自动更新马后炮分析结果: $(date +'%Y-%m-%d %H:%M:%S')"
+              git push origin main
+            fi

@@ -125,10 +125,10 @@ def get_real_github_hash(repo_url: str, target_filename: str) -> Optional[str]:
         logger.error(f"解析 GitHub 哈希失败: {e}")
     return None
 
-def append_to_file(file_path: Union[str, Path], content: str):
+def append_to_file(file_path: Union[str, Path], content: str, mmode: str = 'a'):
     """追加内容到文件"""
     try:
-        with open(file_path, mode='a', encoding=DEFAULT_ENCODING) as f:
+        with open(file_path, mode=mmode, encoding=DEFAULT_ENCODING) as f:
             f.write(content)
     except Exception as e:
         logger.error(f"文件追加失败: {e}")
@@ -144,18 +144,78 @@ def process_stock_code_v2(code: str) -> str:
         return f"BJ{code_str}"
     return f"unknown{code_str}"
 
+def _stock_list_from_sina() -> Optional[pd.DataFrame]:
+    """新浪数据源：stock_zh_a_spot，GitHub Actions 环境通常可访问"""
+    df = ak.stock_zh_a_spot()
+    df = df.rename(columns={"代码": "code", "名称": "name"})
+    df["code"] = df["code"].str.upper()  # bj430017 -> BJ430017, sz000001 -> SZ000001
+    return df[["code", "name"]]
+
+
+def _stock_list_from_exchanges() -> Optional[pd.DataFrame]:
+    """沪深京交易所官网：非东方财富，海外 IP 通常可访问"""
+    parts = []
+    try:
+        sh_df = ak.stock_info_sh_name_code(symbol="主板A股")
+        sh_df = sh_df.rename(columns={"证券代码": "code", "证券简称": "name"})
+        sh_df["code"] = sh_df["code"].apply(process_stock_code_v2)
+        parts.append(sh_df[["code", "name"]])
+    except Exception as e:
+        logger.warning(f"上交所股票列表获取失败: {e}")
+    try:
+        sh_kcb = ak.stock_info_sh_name_code(symbol="科创板")
+        sh_kcb = sh_kcb.rename(columns={"证券代码": "code", "证券简称": "name"})
+        sh_kcb["code"] = sh_kcb["code"].apply(process_stock_code_v2)
+        parts.append(sh_kcb[["code", "name"]])
+    except Exception as e:
+        logger.warning(f"科创板股票列表获取失败: {e}")
+    try:
+        sz_df = ak.stock_info_sz_name_code(symbol="A股列表")
+        sz_df = sz_df.rename(columns={"A股代码": "code", "A股简称": "name"})
+        sz_df["code"] = sz_df["code"].apply(process_stock_code_v2)
+        parts.append(sz_df[["code", "name"]])
+    except Exception as e:
+        logger.warning(f"深交所股票列表获取失败: {e}")
+    try:
+        bj_df = ak.stock_info_bj_name_code()
+        bj_df = bj_df.rename(columns={"证券代码": "code", "证券简称": "name"})
+        bj_df["code"] = bj_df["code"].apply(process_stock_code_v2)
+        parts.append(bj_df[["code", "name"]])
+    except Exception as e:
+        logger.warning(f"北交所股票列表获取失败: {e}")
+    if not parts:
+        return None
+    return pd.concat(parts, ignore_index=True).drop_duplicates(subset=["code"])
+
+
 def get_normalized_stock_list() -> Optional[pd.DataFrame]:
-    """获取并标准化 AkShare 股票列表"""
-    # 清理代理环境
+    """获取并标准化 A 股股票列表，多源 fallback 避免东方财富在 GitHub Actions 失败"""
     for env_key in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']:
         os.environ.pop(env_key, None)
 
+    # 1. 优先沪深京交易所官网（非东方财富，海外/国内 IP 通常可访问）
+    try:
+        df = _stock_list_from_exchanges()
+        if df is not None and len(df) > 1000:
+            return df
+    except Exception as e:
+        logger.warning(f"交易所股票列表获取失败: {e}")
+
+    # 2. 备选新浪（单次请求，易返回 HTML 被限流）
+    try:
+        df = _stock_list_from_sina()
+        if df is not None and len(df) > 1000:
+            return df
+    except Exception as e:
+        logger.warning(f"新浪股票列表获取失败: {e}")
+
+    # 3. 最后尝试东方财富（stock_info_a_code_name，GitHub Actions 常失败）
     try:
         df = ak.stock_info_a_code_name()
-        df['code'] = df['code'].apply(process_stock_code_v2)
+        df["code"] = df["code"].apply(process_stock_code_v2)
         return df
     except Exception as e:
-        logger.error(f"AkShare 数据拉取失败: {e}")
+        logger.error(f"AkShare 股票列表全部数据源拉取失败: {e}")
         return None
 
 def get_latest_trade_date_ak():
@@ -179,6 +239,10 @@ def get_latest_trade_date_ak():
 def get_local_data_date(provider_uri):
     _, stdout, _ = run_command(f"tail -n 1 {provider_uri}/calendars/day.txt")
     return stdout
+
+def get_trade_data(provider_uri):
+    _, stdout, _ = run_command(f"cat {provider_uri}/calendars/day.txt")
+    return stdout.split("\n")
 
 def fix_mlflow_paths(mlruns_dir: Optional[str] = None):
     """精准修复 MLflow 配置文件中的用户路径"""
@@ -213,6 +277,21 @@ def fix_mlflow_paths(mlruns_dir: Optional[str] = None):
 
     logger.info(f"路径修复完成，共修改 {fix_count} 处。")
 
+
+def get_mlruns_dates(backup_dir="../model_pkl"):
+    """从 model_pkl 目录解析 mlruns_YYYY-MM-DD 格式的日期列表"""
+    backup_path = Path(backup_dir).resolve()
+    if not backup_path.exists():
+        print(f"目录不存在: {backup_path}")
+        return []
+
+    pattern = re.compile(r"mlruns_(\d{4}-\d{2}-\d{2})")
+    dates = []
+    for file in backup_path.glob("mlruns_*.tar.gz"):
+        match = pattern.search(file.name)
+        if match:
+            dates.append(match.group(1))
+    return dates
 
 
 def generate_qlib_segments(months_total=12, end_date_str=None):

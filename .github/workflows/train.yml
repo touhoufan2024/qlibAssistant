@@ -53,6 +53,21 @@ jobs:
             echo "⚠️ 警告: 未找到 requirements.txt，跳过安装。"
           fi
 
+      - name: Check if need to train
+        id: need_train_check
+        run: |
+          echo "检查是否需要训练"
+          cd ./roll && python ./roll.py train need_train > ../need_train_result.txt
+          cd ..
+          NEED_TRAIN=$(tail -n1 need_train_result.txt)
+          echo "NEED_TRAIN_RESULT=$NEED_TRAIN" >> $GITHUB_ENV
+
+      - name: Exit if not need training
+        if: env.NEED_TRAIN_RESULT == 'False'
+        run: |
+          echo "不需要训练，直接中断 workflow。"
+          exit 1
+
       - name: delete old model pkl
         run: |
           echo "删掉旧模型"
@@ -89,7 +104,10 @@ jobs:
           # 使用 [skip ci] 防止触发死循环，并加上当前日期作为备注
           git commit -m "Auto-update trained models $(date +'%Y-%m-%d') [skip ci]" || echo "No changes to commit"
           
-          # 4. 推送到当前分支
+          # 4. 拉取远程更新（执行期间 main 可能有新提交，如 Review 的自动推送）
+          git pull --rebase origin main
+          
+          # 5. 推送到当前分支
           git push
 
       # 1. 新增：获取当前日期并存入环境变量

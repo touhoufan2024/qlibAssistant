@@ -1,8 +1,9 @@
 from loguru import logger
 from tabulate import tabulate
-from utils import check_match_in_list, append_to_file, get_normalized_stock_list, filter_csv
+from utils import check_match_in_list, append_to_file, get_normalized_stock_list, filter_csv, get_local_data_date, get_trade_data
 import numpy as np
 import pandas as pd
+import re
 import sys
 import qlib
 from qlib.constant import REG_CN
@@ -48,6 +49,8 @@ class ModelCLI:
     def __init__(self, region=REG_CN, **kwargs):
         self.kwargs = kwargs
         self._init_qlib(region)
+        self.review_result_string = "# 复盘统计分析\n"
+        self.review_result_string += f"\n 统计时间 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
 
     def _init_qlib(self, region):
         """初始化 Qlib 配置"""
@@ -312,10 +315,35 @@ class ModelCLI:
         df = df[(df['ROC10'] > 0.80) & (df['ROC20'] > 0.80) & (df['ROC60'] > 0.80)]
         return df[df['ROC20'] < 1.30]
 
-    def get_real_label(self):
-        dates = self.kwargs['predict_dates'][0]
+    def get_real_label(self, dates = None):
+        if dates is None:
+            dates = self.kwargs['predict_dates'][0]
         df = D.features(D.instruments('all'), ['Ref($close, -2)/Ref($close, -1) - 1'], start_time=dates['start'], end_time=dates['end'], freq='day')
         df.columns = ['real_label']
+        return df
+
+    def get_orignal_data(self, dates=None, instruments='csi300'):
+        if dates is None:
+            dates = self.kwargs['predict_dates'][0]
+        fields = [
+            '$close * $factor', 
+            '$open * $factor', 
+            '$high * $factor', 
+            '$low * $factor',
+        ]
+
+        df = D.features(
+            D.instruments(instruments),
+            fields,
+            start_time=dates['start'],
+            end_time=dates['end'],
+            freq='day'
+        )
+        df.columns = ['close', 'open', 'high', 'low']
+        df = df.reset_index()
+        # 检查返回结果是否为空，并提醒用户
+        if df.empty:
+            print(f"数据为空, 请检查参数: instruments={instruments}, dates={dates}")
         return df
 
     def get_alpha_data(self, name="Alpha158"):
@@ -334,7 +362,7 @@ class ModelCLI:
         BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
         # 精确到分钟的时间戳
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+        timestamp = get_local_data_date(self.kwargs['provider_uri']).strip()
         archive_path = BACKUP_DIR / f"mlruns_{timestamp}.tar.gz"
 
         print(f"📦 正在打包: {SOURCE_DIR} -> {archive_path.name}")
@@ -366,3 +394,182 @@ class ModelCLI:
                 tar.extractall(path=TARGET_PARENT)
 
         print("✅ 恢复完成。")
+
+    def _review_csv(self, df, real_df, n1, n2):
+        df = df[df["avg_score"] > 0].copy()  # 避免 SettingWithCopyWarning
+        real_map = real_df.drop_duplicates('instrument').set_index('instrument')['real_label']
+        df['real_label'] = df['instrument'].map(real_map)
+
+        df['error'] = df['avg_score'] - df['real_label']
+        df['abs_error'] = df['error'].abs()
+
+        date_str = df['datetime'].iloc[0]
+        print(f"分析 {date_str} csv")
+
+        # 把 n1 的 close 和 n2 的 high 按照 instrument 合并到 df 里面，且名称叫做 n1close n2high
+        # n1: DataFrame, 包含 'instrument', 'close'
+        # n2: DataFrame, 包含 'instrument', 'high'
+
+        n1_renamed = n1[['instrument', 'close']].rename(columns={'close': 'n1close'})
+        n2_renamed = n2[['instrument', 'high']].rename(columns={'high': 'n2high'})
+
+        df = df.merge(n1_renamed, on='instrument', how='left')
+        df = df.merge(n2_renamed, on='instrument', how='left')
+
+        top_num_list = [10, 20, 30, 50, 80, 100]
+        profit_num_list = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10]
+
+        # 使用一个 DataFrame 记录循环里的统计信息
+        import pandas as pd
+        # 这里用于保存结果，每个 top 如 Top10/Top30... 对应一个 list: 1%~10%止盈胜率, 持有一天平均收益, 持有一天正收益率
+        topk_result_dict = {
+            # 示例结构: "Top10": [止盈1%, 止盈2%, ..., 止盈10%, 持有一天平均收益, 一天正收益占比]
+        }
+        topk_result_index = ["止盈1%胜率", "止盈2%胜率", "止盈3%胜率", "止盈4%胜率", "止盈5%胜率", "止盈6%胜率", "止盈7%胜率", "止盈8%胜率", "止盈9%胜率", "止盈10%胜率", "持有一天平均收益", "一天正收益占比"]
+        for top_num in top_num_list:  # 遍历 top 数字
+            topk_df = df.sort_values(by='avg_score', ascending=False).head(top_num)
+            topk_avg_profit = topk_df['real_label'].mean()
+            topk_radio = ((topk_df['real_label'] * topk_df['avg_score']) > 0).sum() / len(topk_df)
+            profit_list = []
+            for profit_num in profit_num_list:  # 遍历止盈比例 0.01 0.02 .. 0.1
+                topk_df_profit = (topk_df['n2high'] > topk_df['n1close'] * (1 + profit_num)).sum() / len(topk_df)
+                profit_list.append(topk_df_profit)
+            # 持有一天平均收益, 一天正收益占比 也加进去
+            profit_list.append(topk_avg_profit)
+            profit_list.append(topk_radio)
+            topk_result_dict[f"Top{top_num}"] = profit_list
+        topk_result_df = pd.DataFrame(topk_result_dict, index=topk_result_index)
+        topk_result_df.index.name = date_str
+        # 将所有数值转为百分比字符串（保留两位小数），仅对float类型进行格式化
+        def to_percent(val):
+            if isinstance(val, float) or isinstance(val, int):
+                return f"{val*100:.2f}%"
+            else:
+                return val
+        pct_df = topk_result_df.applymap(to_percent)
+        print(pct_df.to_markdown(index=True))
+
+        self.review_result_string += pct_df.to_markdown(index=True) + "\n"
+        return pct_df
+
+    def _review_subdir(self, subdir):
+        print(f"- {subdir.name}")
+        self.review_result_string += f"## {subdir.name}\n"
+        # 优化：集中提取日期，减少冗余检查
+        date_str = next(
+            (
+                re.match(r"(\d{4}-\d{2}-\d{2})_.*\.csv", file.name).group(1)
+                for file in subdir.iterdir()
+                if file.is_file() and re.match(r"(\d{4}-\d{2}-\d{2})_.*\.csv", file.name)
+            ),
+            None,
+        )
+        if date_str:
+            print(f"直接从文件名提取的日期: {date_str}")
+        else:
+            print("未发现格式为 xxxx-xx-xx_ 的 CSV 文件名")
+
+        trade_data_list = get_trade_data(self.kwargs.get("provider_uri"))
+        if date_str and trade_data_list and date_str in trade_data_list[-2:]:
+            logger.info(f"还不能复盘 {date_str}")
+            self.review_result_string += f"\n{subdir.name} 还不能复盘 {date_str}\n"
+            return
+
+        next1_date = None
+        if date_str and trade_data_list:
+            try:
+                idx = trade_data_list.index(date_str)
+                if idx + 1 < len(trade_data_list):
+                    next1_date = trade_data_list[idx + 1]
+            except ValueError:
+                next1_date = None
+
+        next2_date = None
+        if next1_date and trade_data_list:
+            try:
+                idx = trade_data_list.index(next1_date)
+                if idx + 1 < len(trade_data_list):
+                    next2_date = trade_data_list[idx + 1]
+            except ValueError:
+                next2_date = None
+
+        logger.info(f"开始复盘 {date_str if date_str else '[未知日期]'}  btw:[下1个交易日: {next1_date if next1_date else '[未知日期]'}  下2个交易日: {next2_date if next2_date else '[未知日期]'}]")
+        df_filter_ret, df_ret = None, None
+        if date_str:
+            filter_ret_path = subdir / f"{date_str}_filter_ret.csv"
+            ret_path = subdir / f"{date_str}_ret.csv"
+
+            # 读取 filter_ret
+            if filter_ret_path.exists():
+                try:
+                    df_filter_ret = pd.read_csv(filter_ret_path)
+                    print(f"已读取: {filter_ret_path.name}, 行数: {len(df_filter_ret)}")
+                except Exception as e:
+                    print(f"读取 {filter_ret_path.name} 出错: {e}")
+            else:
+                print(f"  未找到: {filter_ret_path.name}")
+
+            # 读取 ret
+            if ret_path.exists():
+                try:
+                    df_ret = pd.read_csv(ret_path)
+                    print(f"已读取: {ret_path.name}, 行数: {len(df_ret)}")
+                except Exception as e:
+                    print(f"读取 {ret_path.name} 出错: {e}")
+            else:
+                print(f"未找到: {ret_path.name}")
+
+        real_df = self.get_real_label(dates={"start": date_str, "end": date_str})
+        real_df = real_df.reset_index()
+
+        # 删除 'KMID' 及其右侧所有表项（包含 KMID）
+        for name, df in [('df_ret', df_ret), ('df_filter_ret', df_filter_ret)]:
+            if df is not None and not df.empty:
+                if 'KMID' in df.columns:
+                    kmid_idx = df.columns.get_loc('KMID')
+                    # 只保留 KMID 左侧的所有列（不包含 KMID 本身）
+                    if name == 'df_ret':
+                        df_ret = df.iloc[:, :kmid_idx]
+                    else:
+                        df_filter_ret = df.iloc[:, :kmid_idx]
+                else:
+                    print(f"⚠️ {name} 中不存在 'KMID' 列，未做裁剪。")
+
+        next1_date_original_data = self.get_orignal_data(dates={"start": next1_date, "end": next1_date})
+        next2_date_original_data = self.get_orignal_data(dates={"start": next2_date, "end": next2_date})
+
+        print("分析 df_ret:")
+        self.review_result_string += f"### {date_str}_ret.csv\n"
+        self._review_csv(df_ret, real_df, next1_date_original_data, next2_date_original_data)
+
+        print("分析 df_filter_ret:")
+        self.review_result_string += f"### {date_str}_filter_ret.csv\n"
+        self._review_csv(df_filter_ret, real_df, next1_date_original_data, next2_date_original_data)
+
+    def review(self):
+        """马后炮"""
+        base_dir = Path("../qlib_score_csv")
+        if not base_dir.exists() or not base_dir.is_dir():
+            print(f"⚠️ 目录不存在: {base_dir.resolve()}")
+            return
+
+        subdirs = [d for d in base_dir.iterdir() if d.is_dir()]
+        print(f"共发现 {len(subdirs)} 个子目录：")
+        # 按照日期从新到旧遍历
+        def extract_date(subdir):
+            import re
+            m = re.match(r"selection_(\d{8})_", subdir.name)
+            if m:
+                return m.group(1)
+            return ""  # 未识别返回空字符串，排在后面
+
+        sorted_subdirs = sorted(
+            subdirs,
+            key=lambda d: extract_date(d),
+            reverse=True  # 从新到旧
+        )
+        for subdir in sorted_subdirs:
+            self._review_subdir(subdir)
+        print(self.review_result_string)
+        append_to_file("/tmp/review_result.md", self.review_result_string, mmode='w')
+        logger.info(f"review result saved to /tmp/review_result.md")

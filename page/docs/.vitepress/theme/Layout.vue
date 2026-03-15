@@ -11,7 +11,9 @@ const route = useRoute()
 <template>
   <Layout>
     <template #nav-bar-title-after>
-      <SidebarToggle />
+      <span @click.stop.prevent>
+        <SidebarToggle />
+      </span>
     </template>
     <template #doc-after>
       <Giscus :key="route.path" />

@@ -19,7 +19,7 @@ import gc
 import multiprocessing
 from tqdm import tqdm
 from functools import partialmethod
-from utils import generate_qlib_segments
+from utils import generate_qlib_segments, get_mlruns_dates, get_local_data_date
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -191,3 +191,15 @@ class TrainCLI:
             _task["dataset"]["kwargs"]["segments"] = segments
             tasks.append(_task)
         self.task_training(tasks)
+    
+    def need_train(self):
+        mlruns_dates = get_mlruns_dates()
+        print(f"mlruns_dates: {mlruns_dates}")
+        local_data_date = get_local_data_date(self.kwargs['provider_uri'])
+        print(f"local_data_date: {local_data_date}")
+    
+        max_mlruns_date = max(mlruns_dates)
+        
+        return max_mlruns_date < local_data_date
+
+

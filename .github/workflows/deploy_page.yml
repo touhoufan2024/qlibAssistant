@@ -3,12 +3,12 @@ name: 部署 VitePress 网页
 on:
   workflow_dispatch:
   push:
-    branches: [ qlib_score ]
+    branches: [ main, qlib_score ]
     paths:
-      - 'qlib_score_csv/**'
       - 'page/**'
+      - 'qlib_score_csv/**'
   workflow_run:
-    workflows: ["Analysis"]
+    workflows: ["Review"]
     types:
       - completed
 
@@ -18,12 +18,18 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     steps:
-      - name: 检出代码
+      - name: 检出 main 分支
         uses: actions/checkout@v4
         with:
-          ref: qlib_score
+          ref: main
           fetch-depth: 0
+
+      - name: 从 qlib_score 拉取数据
+        run: |
+          git fetch origin qlib_score
+          git checkout origin/qlib_score -- qlib_score_csv || mkdir -p qlib_score_csv
 
       - name: 设置 Node.js
         uses: actions/setup-node@v4

@@ -42,7 +42,7 @@ onUnmounted(() => {
     type="button"
     class="sidebar-toggle"
     :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
-    @click="toggle"
+    @click.stop.prevent="toggle"
   >
     <svg
       v-if="collapsed"
