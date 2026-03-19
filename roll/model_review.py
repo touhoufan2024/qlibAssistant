@@ -4,9 +4,10 @@ from typing import Dict
 
 import pandas as pd
 from loguru import logger
-
+from pprint import pprint
 from utils import append_to_file, TradeDate
 
+top_num_list = [10, 20, 30, 50, 80, 100]
 
 class ModelReviewHelper:
     """负责模型预测结果的回测复盘逻辑，拆分自 ModelCLI 降低单文件复杂度。"""
@@ -24,6 +25,9 @@ class ModelReviewHelper:
         self.review_result_df_filter = {}
         self.trade_date = TradeDate(self.kwargs.get("provider_uri"))
 
+        # ---------- 回测 结果 ----------
+        self.backtest_result_df = {}
+        self.backtest_result_df_filter = {}
 
     # ---------- CSV 单日回测 ----------
     def _review_csv(self, df, real_df, n1, n2):
@@ -43,7 +47,6 @@ class ModelReviewHelper:
         df = df.merge(n1_renamed, on="instrument", how="left")
         df = df.merge(n2_renamed, on="instrument", how="left")
 
-        top_num_list = [10, 20, 30, 50, 80, 100]
         profit_num_list = [0.01 * i for i in range(1, 11)]  # 0.01 ~ 0.10
 
         topk_result_dict = {}
@@ -214,6 +217,125 @@ class ModelReviewHelper:
         self.save_review_result()
         logger.info("review result saved to ../review_csv")
 
+        pprint(self.review_result_df)
+        pprint(self.review_result_df_filter)
+
+
+    # ---------- 追加复盘结果----------
+    def append_review_result(self, date_list):
+        sorted_subdirs = self._get_review_subdirs()
+        if sorted_subdirs is None:
+            return
+        real_df = self.cli.get_real_label(dates={"start": date_list[0], "end": date_list[1]})
+        real_df = real_df.reset_index()
+        real_df["datetime"] = pd.to_datetime(real_df["datetime"])
+        real_label_map = real_df.set_index(["datetime", "instrument"])["real_label"]
+        # 拿到 topk 的 实际 real_label 列表, 并计算出 每天的 平均收益 df_avg_profit
+        # 两个: ret 和 filter_ret
+        for subdir in sorted_subdirs:
+            date_str = self._extract_date_from_csv_name(subdir)
+            df_ret = pd.read_csv(subdir / f"{date_str}_ret.csv", parse_dates=["datetime"])
+            # 直接覆盖原列，保持 real_label 列位置不变，避免 merge 产生 _x/_y 列
+            df_ret["real_label"] = df_ret.set_index(["datetime", "instrument"]).index.map(real_label_map)
+
+            df_filter_ret = pd.read_csv(subdir / f"{date_str}_filter_ret.csv", parse_dates=["datetime"])
+            df_filter_ret["real_label"] = df_filter_ret.set_index(["datetime", "instrument"]).index.map(real_label_map)
+
+            self.review_result_df[date_str] = df_ret
+            self.review_result_df_filter[date_str] = df_filter_ret
+
+    def _calculate_daily_equity(self, df, initial_cash=1.0, fee_rate=0.002):
+        """
+        df: 你截图中的表格数据
+        fee_rate: 双边交易成本 (佣金+印花税+滑点预估)
+        """
+        # 1. 预处理：去掉没有收益数据的末尾行 (NaN)
+        df = df.dropna(subset=['avg_real_label']).copy()
+
+        # 2. 计算每日扣费后的净收益率
+        # 净收益 = 原始平均收益 - (换手率 * 费率)
+        df['daily_net_ret'] = df['avg_real_label'] - (df['turnover_rate'] * fee_rate)
+
+        # 3. 计算累计净值 (核心连乘)
+        # cumprod() 会计算 (1+r1)*(1+r2)*...
+        df['strategy_equity'] = initial_cash * (1 + df['daily_net_ret']).cumprod()
+
+        # 4. 同理计算基准净值 (CSI300 通常不计手续费，作为理想参考)
+        df['csi300_equity'] = initial_cash * (1 + df['csi300_real_label']).cumprod()
+        df['max_equity'] = df['strategy_equity'].cummax()
+        df['drawdown'] = (df['strategy_equity'] - df['max_equity']) / df['max_equity']
+
+        return df
+
+    def _backtest_handle_df_topk(self, df_ret, csi300_df, date_range_list, name, top_num):
+        logger.info(f"backtest handle df {name} top {top_num}")
+        df_topk = []
+        for date in date_range_list:
+            df_topk_ret = df_ret[date]
+            # 获取df_ret的instrument排序前10名
+            topk_instruments = df_topk_ret['instrument'].head(top_num).tolist()
+            # 计算 top10 instrument 的 avg_score 平均值
+            avg_real_label = df_topk_ret[df_topk_ret['instrument'].isin(topk_instruments)]['real_label'].mean()
+            # 根据 date 合并 csi300_df
+            csi300_row = csi300_df[csi300_df['datetime'] == pd.to_datetime(date)]
+            if not csi300_row.empty:
+                csi300_label = csi300_row.iloc[0]["csi300_real_label"]
+            else:
+                csi300_label = None
+            # 将每一行数据作为字典存入列表，最后汇总为一个 DataFrame
+            row_dict = {'date': date}
+            for i, inst in enumerate(topk_instruments):
+                row_dict[f'top{i+1}'] = inst
+            # 填充不足10只股票
+            for i in range(len(topk_instruments), top_num):
+                row_dict[f'top{i+1}'] = None
+            row_dict['avg_real_label'] = avg_real_label
+            row_dict['csi300_real_label'] = csi300_label
+            df_topk.append(row_dict)
+        df_topk = pd.DataFrame(df_topk)
+        # 计算换手率
+        turnover_rates = []
+        for i in range(len(df_topk)):
+            if i == len(df_topk) - 1:
+                turnover_rates.append(float('nan'))
+            else:
+                curr_top = set([df_topk.loc[i, f"top{j+1}"] for j in range(top_num) if pd.notnull(df_topk.loc[i, f"top{j+1}"])])
+                next_top = set([df_topk.loc[i+1, f"top{j+1}"] for j in range(top_num) if pd.notnull(df_topk.loc[i+1, f"top{j+1}"])])
+                if len(curr_top) == 0:
+                    turnover_rates.append(float('nan'))
+                else:
+                    # 换手率定义为当前位置的 top10 有多少支被下一期 top10 替换掉
+                    changed = curr_top - next_top
+                    turnover_rate = len(changed) / top_num
+                    turnover_rates.append(turnover_rate)
+        df_topk["turnover_rate"] = turnover_rates
+
+
+
+        df_equity = self._calculate_daily_equity(df_topk)
+        print(df_equity)
+        if name == "ret":
+            self.backtest_result_df[top_num] = df_equity
+        else:
+            self.backtest_result_df_filter[top_num] = df_equity
+
+    def _backtest_handle_df(self, df_ret, csi300_df, date_range_list, name):
+        for top_num in top_num_list:
+            self._backtest_handle_df_topk(df_ret, csi300_df, date_range_list, name, top_num)
+
+
+    def save_backtest_result(self):
+        backtest_dir = Path("../backtest_csv")
+        backtest_dir.mkdir(parents=True, exist_ok=True)
+        for name, df in self.backtest_result_df.items():
+            df.to_csv(backtest_dir / f"{name}_ret.csv", index=True)
+        for name, df in self.backtest_result_df_filter.items():
+            df.to_csv(backtest_dir / f"{name}_filter_ret.csv", index=True)
+
+    # ---------- 回测 对外入口----------
+    '''
+    回测对象: ret 和 filter 的 topk 股票组合, benchmark: csi300
+    '''
     def backtest(self):
         sorted_subdirs = self._get_review_subdirs()
         if sorted_subdirs is None:
@@ -221,6 +343,22 @@ class ModelReviewHelper:
         date_list = [self._extract_date_from_csv_name(sorted_subdirs[-1]), self._extract_date_from_csv_name(sorted_subdirs[0])]
         logger.info(f"backtest data list: {date_list}")
 
-        trade_date_list = get_trade_date(self.kwargs.get("provider_uri"))
-        idx_s = trade_date_list.index(date_list[0])
-        idx_e = trade_date_list.index(date_list[1])
+        csi300_df = self.cli.get_real_label_csi300(dates={"start": date_list[0], "end": date_list[1]}).reset_index()
+        csi300_df = csi300_df.rename(columns={"real_label": "csi300_real_label"})
+
+        date_range_list = self.trade_date.get_date_range(date_list[0], date_list[1])
+
+        # 获得 ret 和 filter
+        self.append_review_result(date_list)
+
+        print(date_range_list)
+
+        self._backtest_handle_df(self.review_result_df, csi300_df, date_range_list, "ret")
+        self._backtest_handle_df(self.review_result_df_filter, csi300_df, date_range_list, "filter_ret")
+
+        logger.info("backtest result:")
+        pprint(self.backtest_result_df)
+        pprint(self.backtest_result_df_filter)
+
+        self.save_backtest_result()
+        logger.info("backtest result saved to ../backtest_csv")

@@ -10,6 +10,7 @@
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
+    "lightweight-charts": "^5.1.0",
     "vitepress": "^1.0.0"
   }
 }

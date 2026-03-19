@@ -4,8 +4,10 @@
 所有 CSV 转为 Markdown 表格，MD 文件直接引用。
 """
 import csv
+import json
 import os
 import re
+import shutil
 from pathlib import Path
 
 # 路径配置：page/script/gen_page.py -> 项目根目录
@@ -13,6 +15,7 @@ PAGE_ROOT = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = PAGE_ROOT.parent
 DATA_DIR = PROJECT_ROOT / 'qlib_score_csv'
 DOCS_DIR = PAGE_ROOT / 'docs'
+BACKTEST_DIR = PROJECT_ROOT / 'backtest_csv'
 
 
 def csv_to_markdown_table(csv_path: Path) -> str:
@@ -39,15 +42,90 @@ def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
+def sort_backtest_name(stem: str):
+    """
+    排序规则:
+    1) 先 ret，再 filter_ret
+    2) 同类型按 topN 从小到大
+    3) 不匹配规则的文件放末尾并按名称排序
+    """
+    m = re.match(r'^(\d+)_(ret|filter_ret)$', stem)
+    if not m:
+        return (2, float('inf'), stem)
+    topn = int(m.group(1))
+    t = 0 if m.group(2) == 'ret' else 1
+    return (t, topn, stem)
+
+
+def format_backtest_heading(stem: str) -> str:
+    """将文件 stem 转成友好的中文标题，如 Top10策略 ret。"""
+    m = re.match(r'^(\d+)_(ret|filter_ret)$', stem)
+    if not m:
+        return stem
+    topn, typ = m.group(1), m.group(2)
+    return f'Top{topn}策略 {typ}'
+
+
+def sync_backtest_csv_to_public() -> list[str]:
+    """同步项目根目录 backtest_csv 到 docs/public/backtest_csv，并生成 index.json 清单。"""
+    src_dir = BACKTEST_DIR
+    dst_dir = DOCS_DIR / 'public' / 'backtest_csv'
+    ensure_dir(dst_dir)
+
+    # 清理旧 csv，避免历史脏文件残留
+    for old_csv in dst_dir.glob('*.csv'):
+        old_csv.unlink()
+
+    if not src_dir.exists() or not src_dir.is_dir():
+        (dst_dir / 'index.json').write_text(json.dumps([], ensure_ascii=False, indent=2), encoding='utf-8')
+        return []
+
+    files = [p for p in src_dir.iterdir() if p.is_file() and p.suffix == '.csv']
+    files = sorted(files, key=lambda p: sort_backtest_name(p.stem))
+    names = []
+    for f in files:
+        shutil.copy2(f, dst_dir / f.name)
+        names.append(f.name)
+
+    (dst_dir / 'index.json').write_text(json.dumps(names, ensure_ascii=False, indent=2), encoding='utf-8')
+    return names
+
+
+def generate_nav_curve_md(backtest_files: list[str]) -> None:
+    """根据 backtest csv 清单自动生成 nav_curve.md，保证右侧目录可跳转。"""
+    out = DOCS_DIR / 'pages' / 'mahoupao' / 'nav_curve.md'
+    ensure_dir(out.parent)
+
+    lines = [
+        '# 净值曲线（Lightweight Charts）\n\n',
+        '该页面使用 `Lightweight Charts` 绘制回测策略净值曲线，并与 `CSI300` 同图对比。  \n',
+        '数据来源为项目根目录的 `backtest_csv/*.csv`，构建时会自动同步到站点的 `/backtest_csv/` 目录。\n\n',
+        '## 文件约定\n\n',
+        '- 文件名：`<topN>_<type>.csv`，例如 `10_ret.csv`、`20_filter_ret.csv`\n',
+        '- 关键字段：`date`、`strategy_equity`、`csi300_equity`\n',
+        '- 排序规则：先 `ret`，后 `filter_ret`；组内按 `topN` 从小到大\n\n',
+    ]
+
+    strategy_stems = [f[:-4] for f in backtest_files if f.endswith('.csv')]
+    if not strategy_stems:
+        lines.append('> 当前未检测到 backtest csv 文件。\n')
+    else:
+        for name in strategy_stems:
+            lines.append(f'## {format_backtest_heading(name)}\n\n')
+            lines.append(f'<NavCurveChart strategy="{name}" />\n\n')
+
+    out.write_text(''.join(lines), encoding='utf-8')
+
+
 def generate_pages() -> None:
     """扫描并生成所有页面"""
     if not DATA_DIR.exists():
         print(f'错误: 数据目录不存在 {DATA_DIR}')
         return
 
-    # 清空 docs（保留 .vitepress 和 pages 用户页面）
+    # 清空 docs（保留 .vitepress、pages 和 public 用户资源）
     ensure_dir(DOCS_DIR)
-    preserve = {'.vitepress', 'pages'}
+    preserve = {'.vitepress', 'pages', 'public'}
     for p in DOCS_DIR.iterdir():
         if p.name in preserve:
             continue
@@ -118,6 +196,9 @@ def generate_pages() -> None:
             sub_index.append(f'- [{base_name}](/{rel}/{base_name})\n')
         (out_dir / 'index.md').write_text(''.join(sub_index), encoding='utf-8')
 
+    # 同步回测 csv 到 public，供前端绘图，并生成马后炮净值页面
+    backtest_files = sync_backtest_csv_to_public()
+    generate_nav_curve_md(backtest_files)
     # 自动生成 pages 子页面链接和侧边栏（用户只需增删 md 文件）
     generate_pages_auto()
 

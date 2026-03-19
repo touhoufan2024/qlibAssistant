@@ -342,7 +342,7 @@ class TradeDate:
     def get_date_range(self, start_date, end_date):
         idx_s = self.trade_date_list.index(start_date)
         idx_e = self.trade_date_list.index(end_date)
-        return self.trade_date_list[idx_s + 1: idx_e]
+        return self.trade_date_list[idx_s : idx_e + 1]
 
     # 获取所有交易日列表
     def get_trade_date_list(self):

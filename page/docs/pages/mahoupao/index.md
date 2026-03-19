@@ -1,6 +1,7 @@
 # 马后炮
 
 qlib 模型对 CSI300 的预测准确度究竟如何？欢迎点击左侧 [复盘统计分析](https://touhoufan2024.github.io/qlibAssistant/pages/mahoupao/review_result.html) 查看详细分析结果。
+也可以查看 [净值曲线（Lightweight Charts）](/pages/mahoupao/nav_curve) 观察策略与 CSI300 的累计净值变化。
 
 我们会定期对历史预测表现进行汇总和评估，持续跟踪模型的实际准确性。
 
