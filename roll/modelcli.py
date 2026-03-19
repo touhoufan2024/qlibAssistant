@@ -331,12 +331,20 @@ class ModelCLI:
         df = df[(df['ROC10'] > 0.80) & (df['ROC20'] > 0.80) & (df['ROC60'] > 0.80)]
         return df[df['ROC20'] < 1.30]
 
-    def get_real_label(self, dates = None):
+    def get_real_label(self, dates = None, instruments='csi300'):
         if dates is None:
             dates = self.kwargs['predict_dates'][0]
-        df = D.features(D.instruments('all'), ['Ref($close, -2)/Ref($close, -1) - 1'], start_time=dates['start'], end_time=dates['end'], freq='day')
+        df = D.features(D.instruments(instruments), ['Ref($close, -2)/Ref($close, -1) - 1'], start_time=dates['start'], end_time=dates['end'], freq='day')
         df.columns = ['real_label']
         return df
+
+    def get_real_label_csi300(self, dates = None):
+        if dates is None:
+            dates = self.kwargs['predict_dates'][0]
+        df = D.features(['SH000300'], ['Ref($close, -2)/Ref($close, -1) - 1'], start_time=dates['start'], end_time=dates['end'], freq='day')
+        df.columns = ['real_label']
+        return df
+
 
     def get_orignal_data(self, dates=None, instruments='csi300'):
         if dates is None:

@@ -223,6 +223,10 @@ class ModelReviewHelper:
             return
         date_list = [self._extract_date_from_csv_name(sorted_subdirs[-1]), self._extract_date_from_csv_name(sorted_subdirs[0])]
         logger.info(f"backtest data list: {date_list}")
+
+        csi300_df = self.cli.get_real_label_csi300(dates={"start": date_list[0], "end": date_list[1]}).reset_index()
+        csi300_df = csi300_df.rename(columns={"real_label": "csi300_real_label"})
+
         date_range_list = self.trade_date.get_date_range(date_list[0], date_list[1])
 
         real_df = self.cli.get_real_label(dates={"start": date_list[0], "end": date_list[1]})
@@ -246,14 +250,28 @@ class ModelReviewHelper:
 
         print(date_range_list)
 
-
+        df_top10 = []
         for date in date_range_list:
             df_ret = self.review_result_df[date]
             # 获取df_ret的instrument排序前10名
             top10_instruments = df_ret['instrument'].head(10).tolist()
             # 计算 top10 instrument 的 avg_score 平均值
             avg_real_label = df_ret[df_ret['instrument'].isin(top10_instruments)]['real_label'].mean()
-            # 创建表头为 date, top1, ..., top10, avg_real_label
-            columns = ['date'] + [f'top{i+1}' for i in range(10)] + ['avg_real_label']
-            df_top10 = pd.DataFrame([[date] + top10_instruments + [avg_real_label]], columns=columns)
-            print(df_top10)
+            # 根据 date 合并 csi300_df
+            csi300_row = csi300_df[csi300_df['datetime'] == pd.to_datetime(date)]
+            if not csi300_row.empty:
+                csi300_label = csi300_row.iloc[0]["csi300_real_label"]
+            else:
+                csi300_label = None
+            # 将每一行数据作为字典存入列表，最后汇总为一个 DataFrame
+            row_dict = {'date': date}
+            for i, inst in enumerate(top10_instruments):
+                row_dict[f'top{i+1}'] = inst
+            # 填充不足10只股票
+            for i in range(len(top10_instruments), 10):
+                row_dict[f'top{i+1}'] = None
+            row_dict['avg_real_label'] = avg_real_label
+            row_dict['csi300_real_label'] = csi300_label
+            df_top10.append(row_dict)
+        df_top10 = pd.DataFrame(df_top10)
+        print(df_top10)
