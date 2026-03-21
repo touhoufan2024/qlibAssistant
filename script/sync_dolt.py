@@ -2,7 +2,7 @@
 通过 DoltHub HTTP SQL API 双向同步 CSV（云端 ↔ 本地）。
 
 - **pull** = 云端 → 本地（``pull <表名>`` / ``pull_all`` / ``pull_backtest_*`` 等）
-- **push** = 本地 → 云端（``push`` / ``push_*``；合并 ``review_csv``、``qlib_score_csv`` 用 ``push_review_*`` / ``push_qlib_score_*``；**qlib_score 目录合并上传时默认不提交 ``name`` 列**，单文件默认目录用 ``push_*_file``）
+- **push** = 本地 → 云端（``push`` / ``push_*``；合并 ``backtest_csv`` / ``review_csv`` / ``qlib_score_csv`` 用 ``push_backtest_*`` / ``push_review_*`` / ``push_qlib_score_*``；**qlib_score 目录合并上传时默认不提交 ``name`` 列**；backtest 文件名**开头数字**为 ``top_k``）
 - 读（云端 → 本地）: pull（分页 SELECT）
 - 写（本地 → 云端）: push（Write API：临时分支 DELETE + INSERT，再空 POST merge 回 main；DoltHub 写 API **不支持** ``SET NAMES``/多语句；``merge_message`` 仅打印到终端；默认按云端 DESCRIBE 列对齐，本地多出的列不提交）
 - 盘点: inspect（默认详细：DESCRIBE / 行数 / 时间范围 / 样本）；inspect_table 单表；--brief 仅一行汇总
@@ -17,10 +17,12 @@
   DOLT_PUSH_FROM_BRANCH  push 时基于哪个分支开临时分支，默认与 DOLT_REF 一致
   REVIEW_CSV_DIR         覆盖 review 目录；未设置时固定为「项目根目录/review_csv」
   QLIB_SCORE_CSV_DIR     覆盖 qlib_score_csv；未设置时固定为「项目根目录/qlib_score_csv」；push_qlib_score_* 递归子目录
+  BACKTEST_CSV_DIR       覆盖 backtest_csv；未设置时固定为「项目根目录/backtest_csv」；push_backtest_* 仅一层目录
 """
 from __future__ import annotations
 
 import os
+import re
 import sys
 import tempfile
 from datetime import datetime
@@ -371,6 +373,27 @@ def _default_qlib_score_csv_dir() -> str:
     return os.path.join(_project_root(), "qlib_score_csv")
 
 
+def _default_backtest_csv_dir() -> str:
+    """
+    默认 ``<项目根>/backtest_csv``。
+    若设置 ``BACKTEST_CSV_DIR``，则使用该路径（相对路径按当前工作目录解析）。
+    """
+    env = (os.getenv("BACKTEST_CSV_DIR") or "").strip()
+    if env:
+        return os.path.abspath(env)
+    return os.path.join(_project_root(), "backtest_csv")
+
+
+def _top_k_from_backtest_basename(basename: str) -> int:
+    """从文件名解析 ``top_k``：须以数字开头（如 ``10_ret.csv`` → 10，``100_filter_ret.csv`` → 100）。"""
+    m = re.match(r"^(\d+)", basename)
+    if not m:
+        raise DoltHubSqlError(
+            f"backtest CSV 文件名须以数字开头表示 top_k：{basename!r}",
+        )
+    return int(m.group(1))
+
+
 def _csv_matches_name_filter(filename: str, *, name_contains_filter: bool) -> bool:
     low = filename.lower()
     has_filter = "filter" in low
@@ -460,6 +483,159 @@ def _merge_review_csvs_to_tempfile(paths: list[str]) -> tuple[str, int]:
     os.close(fd)
     merged.to_csv(tmp_path, index=False, encoding="utf-8")
     return tmp_path, n
+
+
+def _read_backtest_csv_normalized(path: str) -> pd.DataFrame:
+    """
+    读取 backtest 导出的 CSV；若仅有 ``date`` 列则改名为 ``datetime`` 以便与 Dolt 表对齐；
+    根据**文件名开头数字**写入列 ``top_k``（若 CSV 内已有 ``top_k`` 则覆盖为文件名值）。
+    """
+    df = _read_review_csv_normalized(path)
+    if "datetime" not in df.columns and "date" in df.columns:
+        df = df.rename(columns={"date": "datetime"})
+    bn = os.path.basename(path)
+    top_k = _top_k_from_backtest_basename(bn)
+    drop_tk = [c for c in df.columns if str(c).lower() == "top_k"]
+    if drop_tk:
+        df = df.drop(columns=drop_tk)
+    df["top_k"] = top_k
+    return df
+
+
+def _merge_backtest_csvs_to_tempfile(paths: list[str]) -> tuple[str, int]:
+    """合并多个 backtest CSV（带 top_k）到临时文件，返回 (路径, 行数)。"""
+    dfs = [_read_backtest_csv_normalized(p) for p in paths]
+    merged = pd.concat(dfs, ignore_index=True)
+    merged = _sort_merged_review_by_date_only(merged)
+    n = len(merged)
+    fd, tmp_path = tempfile.mkstemp(suffix=".csv", prefix="backtest_merge_")
+    os.close(fd)
+    merged.to_csv(tmp_path, index=False, encoding="utf-8")
+    return tmp_path, n
+
+
+def push_merged_backtest_csvs_to_table(
+    table: str,
+    paths: list[str],
+    *,
+    label: str,
+    from_branch: str | None = None,
+    to_branch: str | None = None,
+    merge: bool = True,
+    insert_batch_rows: int = 80,
+    match_dolt_columns: bool = True,
+) -> None:
+    """将多个 backtest CSV 合并后 push 到指定 Dolt 表（整表覆盖，逻辑同 push_table_from_csv）。"""
+    if not paths:
+        raise DoltHubSqlError(f"{label}: 没有匹配的 CSV 文件")
+    tmp, n = _merge_backtest_csvs_to_tempfile(paths)
+    try:
+        print(
+            f"📎 {label}: 合并 {len(paths)} 个文件 → 临时表 {n} 行，目标 Dolt 表 `{table}`",
+        )
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+        merged_msg = f"sync {table} ({n} rows, {len(paths)} files) @ {ts}"
+        push_table_from_csv(
+            table,
+            tmp,
+            from_branch=from_branch,
+            to_branch=to_branch,
+            merge=merge,
+            insert_batch_rows=insert_batch_rows,
+            match_dolt_columns=match_dolt_columns,
+            merge_message=merged_msg,
+            omit_name_column=False,
+        )
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def push_backtest_csvs_by_name_rule(
+    table: str,
+    *,
+    name_contains_filter: bool,
+    backtest_dir: str | None = None,
+    path: str | None = None,
+    from_branch: str | None = None,
+    to_branch: str | None = None,
+    merge: bool = True,
+    insert_batch_rows: int = 80,
+    match_dolt_columns: bool = True,
+) -> None:
+    """
+    合并 ``backtest_csv`` 目录下符合文件名规则的 CSV，push 到 ``table``。
+
+    - 文件名含 ``filter`` → ``backtest_filter_ret``；不含 → ``backtest_ret``
+    - 文件名**须以数字开头**，该数字写入列 ``top_k``（如 ``10_ret.csv`` → ``top_k=10``）
+    - 默认仅扫描目录一层（不递归子目录）
+    """
+    other = "push_backtest_filter_ret" if not name_contains_filter else "push_backtest_ret"
+    if path:
+        if not os.path.isfile(path):
+            raise DoltHubSqlError(f"文件不存在: {path}")
+        bn = os.path.basename(path).lower()
+        has_f = "filter" in bn
+        if name_contains_filter and not has_f:
+            raise DoltHubSqlError(f"该文件名不含 filter，请改用 {other}")
+        if not name_contains_filter and has_f:
+            raise DoltHubSqlError(f"该文件名含 filter，请改用 {other}")
+        paths = [path]
+    else:
+        root = backtest_dir or _default_backtest_csv_dir()
+        paths = _collect_csv_paths_by_name_filter(
+            root,
+            name_contains_filter=name_contains_filter,
+            recursive=False,
+        )
+
+    if not paths:
+        raise DoltHubSqlError(
+            "没有可提交的 backtest CSV（检查目录或 filter 规则）",
+        )
+
+    mode = "文件名含 filter" if name_contains_filter else "文件名不含 filter"
+    push_merged_backtest_csvs_to_table(
+        table,
+        paths,
+        label=f"{table}（{mode}）",
+        from_branch=from_branch,
+        to_branch=to_branch,
+        merge=merge,
+        insert_batch_rows=insert_batch_rows,
+        match_dolt_columns=match_dolt_columns,
+    )
+
+
+def _run_backtest_push_cli(
+    table: str,
+    name_contains_filter: bool,
+    *,
+    backtest_dir: str | None = None,
+    path: str | None = None,
+    from_branch: str | None = None,
+    to_branch: str | None = None,
+    merge: bool = True,
+    insert_batch_rows: int = 80,
+    match_dolt_columns: bool = True,
+) -> None:
+    try:
+        push_backtest_csvs_by_name_rule(
+            table,
+            name_contains_filter=name_contains_filter,
+            backtest_dir=backtest_dir,
+            path=path,
+            from_branch=from_branch,
+            to_branch=to_branch,
+            merge=merge,
+            insert_batch_rows=insert_batch_rows,
+            match_dolt_columns=match_dolt_columns,
+        )
+    except DoltHubSqlError as e:
+        print(f"❌ {e}")
+        sys.exit(1)
 
 
 def push_merged_review_csvs_to_table(
@@ -1181,18 +1357,57 @@ class DoltHubCLI:
 
     def push_backtest_filter_ret(
         self,
+        backtest_dir: str | None = None,
         path: str | None = None,
+        from_branch: str | None = None,
+        to_branch: str | None = None,
+        merge: bool = True,
+        insert_batch_rows: int = 80,
         match_dolt_columns: bool = True,
-        merge_message: str | None = None,
     ) -> None:
-        pass
+        """
+        **本地 → 云端**：在 ``backtest_csv`` 下合并「文件名含 filter」的 .csv，提交到 ``backtest_filter_ret``。
+
+        文件名须以数字开头，该数字写入列 ``top_k``；与 ``push_backtest_ret`` 仅文件名规则与目标表不同；需 ``DOLT_TOKEN``。
+        """
+        _run_backtest_push_cli(
+            "backtest_filter_ret",
+            True,
+            backtest_dir=backtest_dir,
+            path=path,
+            from_branch=from_branch,
+            to_branch=to_branch,
+            merge=merge,
+            insert_batch_rows=insert_batch_rows,
+            match_dolt_columns=match_dolt_columns,
+        )
+
     def push_backtest_ret(
         self,
+        backtest_dir: str | None = None,
         path: str | None = None,
+        from_branch: str | None = None,
+        to_branch: str | None = None,
+        merge: bool = True,
+        insert_batch_rows: int = 80,
         match_dolt_columns: bool = True,
-        merge_message: str | None = None,
     ) -> None:
-        pass
+        """
+        **本地 → 云端**：在 ``backtest_csv`` 下合并「文件名不含 filter」的 .csv，提交到 ``backtest_ret``。
+
+        文件名须以数字开头，该数字写入列 ``top_k``；与 ``push_backtest_filter_ret`` 仅文件名规则与目标表不同；需 ``DOLT_TOKEN``。
+        """
+        _run_backtest_push_cli(
+            "backtest_ret",
+            False,
+            backtest_dir=backtest_dir,
+            path=path,
+            from_branch=from_branch,
+            to_branch=to_branch,
+            merge=merge,
+            insert_batch_rows=insert_batch_rows,
+            match_dolt_columns=match_dolt_columns,
+        )
 
 
 
