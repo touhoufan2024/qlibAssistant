@@ -1,0 +1,1 @@
+import{_,o as i,c as s,a0 as t}from"./chunks/framework.4diiUCsN.js";const f=JSON.parse('{"title":"qlib csi300 score","description":"","frontmatter":{},"headers":[],"relativePath":"index.md","filePath":"index.md"}'),a={name:"index.md"};function l(o,e,r,n,c,h){return i(),s("div",null,[...e[0]||(e[0]=[t("",6)])])}const p=_(a,[["render",l]]);export{f as __pageData,p as default};
