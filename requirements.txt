@@ -19,7 +19,5 @@ beautifulsoup4
 loguru 
 PyYAML
 
-# page生成
-mkdocs
-mkdocs-material
-mkdocs-table-reader-plugin
+sqlalchemy
+mysql-connector-python

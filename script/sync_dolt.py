@@ -2,7 +2,7 @@
 通过 DoltHub HTTP SQL API 双向同步 CSV（云端 ↔ 本地）。
 
 - **pull** = 云端 → 本地（``pull <表名>`` / ``pull_all`` / ``pull_backtest_*`` 等）
-- **push** = 本地 → 云端（``push`` / ``push_*``；合并 ``review_csv``、``qlib_score_csv`` 用 ``push_review_*`` / ``push_qlib_score_*``，单文件默认目录用 ``push_*_file``）
+- **push** = 本地 → 云端（``push`` / ``push_*``；合并 ``review_csv``、``qlib_score_csv`` 用 ``push_review_*`` / ``push_qlib_score_*``；**qlib_score 目录合并上传时默认不提交 ``name`` 列**，单文件默认目录用 ``push_*_file``）
 - 读（云端 → 本地）: pull（分页 SELECT）
 - 写（本地 → 云端）: push（Write API：临时分支 DELETE + INSERT，再空 POST merge 回 main；DoltHub 写 API **不支持** ``SET NAMES``/多语句；``merge_message`` 仅打印到终端；默认按云端 DESCRIBE 列对齐，本地多出的列不提交）
 - 盘点: inspect（默认详细：DESCRIBE / 行数 / 时间范围 / 样本）；inspect_table 单表；--brief 仅一行汇总
@@ -245,6 +245,15 @@ def _sql_literal(val: Any) -> str:
     return "'" + s.replace("'", "''") + "'"
 
 
+def _dataframe_omit_name_column(df: pd.DataFrame) -> pd.DataFrame:
+    """去掉列名（大小写不敏感）为 ``name`` 的列，用于 qlib_score 推送时避免中文 name 触发 DoltHub 写入问题。"""
+    drop_cols = [c for c in df.columns if str(c).lower() == "name"]
+    if not drop_cols:
+        return df
+    print("ℹ️  qlib_score 推送：已去掉列 name，INSERT 不包含该列。")
+    return df.drop(columns=drop_cols)
+
+
 def _insert_batch_sql(table: str, df: pd.DataFrame, start: int, end: int) -> str:
     safe_t = _sql_ident(table)
     cols = [_sql_ident(c) for c in df.columns]
@@ -267,6 +276,7 @@ def push_table_from_csv(
     insert_batch_rows: int = 80,
     match_dolt_columns: bool = True,
     merge_message: str | None = None,
+    omit_name_column: bool = False,
 ) -> None:
     """
     本地 CSV → 云端：在临时分支上清空表并插入 CSV 数据，可选合并回 from_branch（通常 main）。
@@ -278,6 +288,8 @@ def push_table_from_csv(
     本地 CSV 多出的列会忽略；云端有而本地缺的列填 NULL。
 
     merge_message: 合并时在**终端**打印的说明；未传时自动生成。DoltHub API 不会将其写入 merge commit。
+
+    omit_name_column: 为 True 时在列对齐后去掉 ``name`` 列（``push_qlib_score_*`` 目录合并上传默认开启）。
     """
     fb = from_branch or _push_from_branch()
     tb = to_branch or f"dolt-csv-{uuid.uuid4().hex[:12]}"
@@ -297,6 +309,9 @@ def push_table_from_csv(
                 "本地 CSV 与 Dolt 表列名无交集，无法提交（请检查列名是否与云端一致）",
             )
         df = align_dataframe_to_dolt_columns(df, dolt_cols)
+
+    if omit_name_column:
+        df = _dataframe_omit_name_column(df)
 
     print(f"📤 写入分支 `{tb}`（基于 `{fb}`），目标表 `{table}`，共 {len(df)} 行，列 {list(df.columns)} …")
 
@@ -457,6 +472,7 @@ def push_merged_review_csvs_to_table(
     merge: bool = True,
     insert_batch_rows: int = 80,
     match_dolt_columns: bool = True,
+    omit_name_column: bool = False,
 ) -> None:
     """
     将多个本地 CSV 合并后 push 到指定 Dolt 表（整表覆盖，逻辑同 push_table_from_csv）。
@@ -479,6 +495,7 @@ def push_merged_review_csvs_to_table(
             insert_batch_rows=insert_batch_rows,
             match_dolt_columns=match_dolt_columns,
             merge_message=merged_msg,
+            omit_name_column=omit_name_column,
         )
     finally:
         try:
@@ -502,6 +519,7 @@ def push_csv_group_by_name_rule(
     merge: bool = True,
     insert_batch_rows: int = 80,
     match_dolt_columns: bool = True,
+    omit_name_column: bool = False,
 ) -> None:
     """
     合并本地目录下符合文件名规则的 CSV（可选递归子目录），push 到 ``table``。
@@ -509,6 +527,7 @@ def push_csv_group_by_name_rule(
     - ``name_contains_filter=True``：只选文件名含 ``filter`` 的 .csv
     - ``name_contains_filter=False``：只选文件名不含 ``filter`` 的 .csv
     - ``exclude_basenames``：按文件名（小写）再排除，例如 qlib_score 排除 ``total.csv``
+    - ``omit_name_column``：合并上传前去掉列 ``name``（qlib_score 流程为 True）
     """
     if path:
         if not os.path.isfile(path):
@@ -548,6 +567,7 @@ def push_csv_group_by_name_rule(
         merge=merge,
         insert_batch_rows=insert_batch_rows,
         match_dolt_columns=match_dolt_columns,
+        omit_name_column=omit_name_column,
     )
 
 
@@ -578,6 +598,7 @@ def push_review_csvs_by_name_rule(
         merge=merge,
         insert_batch_rows=insert_batch_rows,
         match_dolt_columns=match_dolt_columns,
+        omit_name_column=False,
     )
 
 
@@ -593,7 +614,7 @@ def push_qlib_score_csvs_by_name_rule(
     insert_batch_rows: int = 80,
     match_dolt_columns: bool = True,
 ) -> None:
-    """``qlib_score_csv`` 下**递归**遍历所有子目录中的 .csv（默认排除 ``total.csv``），规则同 review。"""
+    """``qlib_score_csv`` 下**递归**遍历所有子目录中的 .csv（默认排除 ``total.csv``）；上传前会去掉 ``name`` 列（INSERT 不包含）。"""
     other = "push_qlib_score_filter_ret" if not name_contains_filter else "push_qlib_score_ret"
     push_csv_group_by_name_rule(
         table,
@@ -609,6 +630,7 @@ def push_qlib_score_csvs_by_name_rule(
         merge=merge,
         insert_batch_rows=insert_batch_rows,
         match_dolt_columns=match_dolt_columns,
+        omit_name_column=True,
     )
 
 
