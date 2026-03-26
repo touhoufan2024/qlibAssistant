@@ -26,11 +26,17 @@ tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 from qlib.workflow.task.gen import handler_mod as default_handler_mod
 
 
-def _train_worker(task, exp_name):
+def _train_worker(task, exp_name, qlib_config=None):
     """
     这是子进程实际执行的函数。
     """
     try:
+        # 如果你有特殊的配置，建议通过 qlib_config 传进来
+        # 如果只是默认配置，可以直接 qlib.init()
+        if qlib_config:
+            qlib.init(**qlib_config)
+        else:
+            qlib.init()
         # 打印 PID 方便观察
         logger.info(f"🔵 [子进程 PID: {os.getpid()}] 开始训练...", flush=True)
 
@@ -45,13 +51,13 @@ def _train_worker(task, exp_name):
         logger.info(f"🔴 [子进程 PID: {os.getpid()}] 训练出错: {e}", flush=True)
         raise e
 
-def run_train_blocking(task, exp_name):
+def run_train_blocking(task, exp_name, qlib_config=None):
     """
     主进程调用的函数。
     功能：启动子进程 -> 阻塞等待 -> 返回结果
     """
     # 1. 创建子进程，目标是上面的 _train_worker 函数
-    p = multiprocessing.Process(target=_train_worker, args=(task, exp_name))
+    p = multiprocessing.Process(target=_train_worker, args=(task, exp_name, qlib_config))
 
     # 2. 启动子进程
     p.start()
@@ -101,7 +107,8 @@ class TrainCLI:
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
-        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
+        self.qlib_config = dict(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
+        qlib.init(**self.qlib_config)
         model_name = kwargs["model_name"]
         dataset_name = kwargs["dataset_name"]
         stock_pool = kwargs["stock_pool"]
@@ -179,7 +186,7 @@ class TrainCLI:
                 logger.info(f"Skipping training for segment {train_time_seg} as it already exists in the experiment.")
                 continue
 
-            run_train_blocking(task, exp_name)
+            run_train_blocking(task, exp_name, self.qlib_config)
             gc.collect()
 
     def start_custom(self):
