@@ -15,6 +15,8 @@ import akshare as ak
 import pandas as pd
 from loguru import logger
 
+import locale
+
 # --- 常量定义 ---
 DEFAULT_ENCODING = "utf-8"
 DEFAULT_TIMEOUT = (10, 30)  # (连接超时, 读取超时)
@@ -62,13 +64,15 @@ def get_latest_url(base_url: str) -> str:
 
 def run_command(cmd: str) -> Tuple[int, str, str]:
     """执行 Shell 命令并捕获输出"""
+    # 获取当前运行环境的系统编码
+    current_encoding = locale.getpreferredencoding()
     try:
         result = subprocess.run(
             cmd,
             shell=True,
             capture_output=True,
             text=True,
-            encoding=DEFAULT_ENCODING
+            encoding=current_encoding
         )
         return result.returncode, result.stdout.strip(), result.stderr.strip()
     except Exception as e:
@@ -237,23 +241,53 @@ def get_latest_trade_date_ak():
         return None
 
 def get_local_data_date(provider_uri):
-    _, stdout, _ = run_command(f"tail -n 1 {provider_uri}/calendars/day.txt")
-    return stdout
+    """获取本地数据日历的最后一行日期，支持跨平台路径和 ~ 符号"""
+    # 处理 ~ 符号并转换为系统标准路径
+    base_path = Path(provider_uri).expanduser()
+    calendar_path = base_path / "calendars" / "day.txt"
+
+    if not calendar_path.exists():
+        logger.error(f"日历文件不存在: {calendar_path}")
+        return ""
+
+    try:
+        with open(calendar_path, 'rb') as f:
+            f.seek(0, 2)  # 移动到文件末尾
+            file_size = f.tell()
+            if file_size == 0:
+                return ""
+
+            # 从倒数第二个字节开始向前找换行符（避开文件末尾可能的换行）
+            pos = file_size - 2
+            while pos > 0:
+                f.seek(pos)
+                if f.read(1) == b'\n':
+                    break
+                pos -= 1
+
+            # 读取最后一行
+            last_line = f.readline().decode('utf-8', errors='ignore')
+            return last_line.strip()
+    except Exception as e:
+        logger.error(f"读取本地数据日期失败: {e}")
+        return ""
 
 def fix_mlflow_paths(mlruns_dir: Optional[str] = None):
     """精准修复 MLflow 配置文件中的用户路径"""
-    current_home = str(Path.home())
-    current_prefix = f"file://{current_home}"
+    # 使用 as_posix() 确保在 Windows 下也是正斜杠，避免正则替换时的 \U 转义错误
+    current_home = Path.home().as_posix()
+    # MLflow URI 在 Windows 上通常使用 file:///C:/... 格式（3个斜杠）
+    current_prefix = f"file:///{current_home.lstrip('/')}"
 
     if mlruns_dir is None:
-        mlruns_dir = os.path.join(current_home, ".qlibAssistant", "mlruns")
+        mlruns_dir = Path.home() / ".qlibAssistant" / "mlruns"
 
     base_path = Path(mlruns_dir).expanduser().resolve()
     if not base_path.exists():
         logger.warning(f"目录不存在: {base_path}")
         return
 
-    logger.info(f"正在修复 MLflow 路径前缀为: {current_home}")
+    logger.info(f"正在修复 MLflow 路径前缀为: {current_prefix}")
 
     fix_count = 0
     for root, _, files in os.walk(base_path):
@@ -333,10 +367,18 @@ def generate_qlib_segments(months_total=12, end_date_str=None):
 class TradeDate:
     # 初始化交易日列表
     def __init__(self, provider_uri):
-        self.provider_uri = provider_uri
-        self.trade_date_file = f"{self.provider_uri}/calendars/day.txt"
-        _, stdout, _ = run_command(f"cat {self.trade_date_file}")
-        self.trade_date_list = stdout.split("\n")
+        # 使用 Path 处理跨平台路径
+        self.provider_uri = Path(provider_uri).expanduser()
+        self.trade_date_file = self.provider_uri / "calendars" / "day.txt"
+        
+        self.trade_date_list = []
+        if self.trade_date_file.exists():
+            try:
+                with open(self.trade_date_file, "r", encoding=DEFAULT_ENCODING) as f:
+                    # 过滤空行并去除换行符
+                    self.trade_date_list = [line.strip() for line in f if line.strip()]
+            except Exception as e:
+                logger.error(f"读取交易日历文件失败: {e}")
 
     # 获取 start_date 和 end_date 之间的交易日列表
     def get_date_range(self, start_date, end_date):
