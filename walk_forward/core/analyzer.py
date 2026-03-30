@@ -3,11 +3,6 @@ import numpy as np
 import qlib
 from qlib.data import D
 from qlib.workflow import R
-from qlib.contrib.strategy import TopkDropoutStrategy
-try:
-    from qlib.backtest import backtest as qlib_backtest
-except ImportError:
-    from qlib.contrib.evaluate import backtest as qlib_backtest
 from loguru import logger
 from pathlib import Path
 from typing import Dict, Any, List
@@ -16,6 +11,7 @@ class WFAnalyzer:
     def __init__(self, qlib_config: Dict[str, Any], state_history: List[Dict[str, Any]]):
         self.qlib_config = qlib_config
         self.history = state_history
+        # 仅在需要时初始化 Qlib
         qlib.init(**self.qlib_config)
 
     def get_training_metrics(self) -> pd.DataFrame:
@@ -43,6 +39,14 @@ class WFAnalyzer:
 
     def analyze_test_performance(self, prediction_file: str, stock_pool: str = "csi300") -> Dict[str, Any]:
         """分析测试集表现，结合简单计算与 Qlib 官方回测"""
+        # --- 局部延迟导入：防止 Windows Spawn 过程中的导入锁死 ---
+        try:
+            from qlib.backtest import backtest as qlib_backtest
+            from qlib.contrib.strategy import TopkDropoutStrategy
+        except ImportError:
+            from qlib.contrib.evaluate import backtest as qlib_backtest
+            from qlib.contrib.strategy import TopkDropoutStrategy
+
         if not Path(prediction_file).exists():
             return {"error": f"预测文件不存在: {prediction_file}"}
 
@@ -84,7 +88,7 @@ class WFAnalyzer:
         strategy = TopkDropoutStrategy(**STRATEGY_CONFIG)
         report_normal, positions_normal = qlib_backtest(server=strategy, **BACKTEST_CONFIG)
         
-        # 3. 手动计算关键指标 (避开 risk_analysis 导入问题)
+        # 3. 手动计算关键指标
         perf = report_normal
         perf['excess'] = perf['return'] - perf['bench']
         cum_ret = (1 + perf["return"]).cumprod()

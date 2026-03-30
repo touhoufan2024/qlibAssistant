@@ -17,8 +17,7 @@ class WalkForwardCLI:
         self.calendar = WFCalendar(self.config.provider_uri)
         self.state_manager = WFStateManager("./wf_state.json", self.config.mlruns_uri)
         
-        # 不再在 __init__ 提前调用 qlib.init()。
-        # 直接构建配置字典，这样主进程在启动子进程前是“干净”的。
+        # 定义 qlib_config 模板
         self.qlib_config = {
             "provider_uri": self.config.provider_uri,
             "region": "cn",
@@ -87,14 +86,16 @@ class WalkForwardCLI:
         )
         logger.info(f"生成重训计划点: {len(triggers)} 个")
 
-        # --- 阶段 A: 步进处理 ---
+        all_predictions = []
+
+        # --- 步进处理 ---
         for i, ti in enumerate(triggers):
             logger.info(f"--- 步进处理第 {i+1}/{len(triggers)} 个区间 [T_i: {ti}] ---")
             
             # 找到下个重训点作为区间边界
             next_ti = triggers[i+1] if i + 1 < len(triggers) else end_date
             
-            # A-1: 训练环节 (检查状态，避免重复训练)
+            # A-1: 训练环节
             event = next((e for e in self.state_manager.history if e["retrain_date"] == ti), None)
             
             if not event:
@@ -112,11 +113,35 @@ class WalkForwardCLI:
                     
                     exp_name = f"WF_{task_cfg.name}"
                     
-                    # 派发训练 (注意：这里现在返回的是 rid 或 None)
-                    rid = run_train_process(task, exp_name, self.qlib_config)
+                    # 派发训练
+                    success = run_train_process(task, exp_name, self.qlib_config)
                     
-                    if rid:
-                        ti_rids[task_cfg.name] = rid
+                    if success:
+                        # 训练成功后，在主进程通过 Qlib 获取刚才生成的 rid
+                        import qlib
+                        import time
+                        from qlib.workflow import R
+                        qlib.init(**self.qlib_config)
+                        exp = R.get_exp(experiment_name=exp_name)
+                        
+                        # 增加重试机制 (最多 3 次)，应对 MLflow 文件系统延迟
+                        latest_rid = None
+                        for _ in range(3):
+                            rids = exp.list_recorders()
+                            if rids:
+                                # 直接通过 exp 对象获取 Recorder
+                                recorders = [exp.get_recorder(recorder_id=rid) for rid in rids]
+                                # 按开始时间降序排序，取最新的
+                                sorted_recs = sorted(recorders, key=lambda r: r.info['start_time'], reverse=True)
+                                latest_rid = sorted_recs[0].id
+                                break
+                            time.sleep(1)
+                        
+                        if latest_rid:
+                            ti_rids[task_cfg.name] = latest_rid
+                            logger.info(f"成功记录 RID: {latest_rid}")
+                        else:
+                            logger.error(f"无法从实验 {exp_name} 中获取新生成的 RID")
                     else:
                         logger.error(f"任务 {task_cfg.name} 训练失败！")
                 
@@ -126,10 +151,11 @@ class WalkForwardCLI:
             else:
                 logger.info(f"点 {ti} 已有有效训练记录。")
 
-            # --- 阶段 B: 推理 (暂且保持注释) ---
+            # --- 阶段 B: 推理 (为了验证稳定性，我们先保持推理部分在主进程执行的注释，随后再将其隔离) ---
             """
             if event:
-                logger.info(f"推理步骤待后续整合...")
+                logger.info(f"执行区间 [{ti} ~ {next_ti}) 的推理预测...")
+                # 推理逻辑整合将在下一步进行
             """
 
         logger.info("✨ Walk-Forward 流程执行结束。")

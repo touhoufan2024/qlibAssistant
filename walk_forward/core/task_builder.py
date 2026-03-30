@@ -67,8 +67,6 @@ class WFTaskBuilder:
             raise ValueError(f"暂不支持模型: {model_name}")
 
         train_seg = segments["train"]
-        # 如果未指定 end_time，则默认使用训练集的结束时间
-        actual_end_time = end_time if end_time else train_seg[1]
         
         # 组装 Dataset 配置
         dataset_config = {
@@ -79,8 +77,7 @@ class WFTaskBuilder:
                     "class": dataset_name,
                     "module_path": "qlib.contrib.data.handler",
                     "kwargs": {
-                        # 【关键修复】使用与 roll 模块一致的全局起止时间，确保复用 Qlib 硬盘缓存！
-                        # 否则 Qlib 检测到时间不一致会启动多进程从头重算 Alpha158，瞬间撑爆内存导致死机。
+                        # 【核心修复】固定起止时间以命中 roll 模块的 Alpha158 磁盘缓存
                         "start_time": "2018-01-01",
                         "end_time": "2066-08-01", 
                         "fit_start_time": train_seg[0],
