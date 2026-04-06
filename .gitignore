@@ -13,3 +13,6 @@ page/docs/.vitepress/cache/
 page/docs/index.md
 page/docs/score/
 page
+
+walk_forward_output/
+wf_state.json

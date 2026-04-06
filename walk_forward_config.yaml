@@ -15,8 +15,8 @@ trigger_interval: 20      # 缩短间隔至 20 天以观察触发
 
 # 多尺度任务定义
 tasks:
-  - name: "linear_test"
-    model_name: "Linear"
+  - name: "lgbm_test"
+    model_name: "LightGBM"
     dataset_name: "Alpha158"
     lookback_unit: "months"
     lookback_length: 12

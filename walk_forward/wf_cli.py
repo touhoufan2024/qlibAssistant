@@ -4,7 +4,7 @@ from loguru import logger
 from pathlib import Path
 from typing import Dict, Any, List
 
-# 核心导入改为延迟加载，防止 Windows 子进程启动时反复触发 import 警告
+# 核心导入改为轻量级组件，防止 Windows 子进程启动时反复触发 import 警告
 from .utils.calendar import WFCalendar
 from .core.config import load_wf_config
 from .core.state import WFStateManager
@@ -32,8 +32,7 @@ class WalkForwardCLI:
         }
         
     def analyze(self):
-        """查看并打印训练指标、步进测试集 IC 及回测表现"""
-        # 仅在分析时导入重量级组件
+        """查看并打印训练指标、步进测试集 IC 及双轨回测表现"""
         import pandas as pd
         from .core.analyzer import WFAnalyzer
         from tabulate import tabulate
@@ -48,7 +47,7 @@ class WalkForwardCLI:
         else:
             print("暂无训练记录。")
 
-        # 2. 自动寻找最新的预测结果文件进行分析
+        # 2. 自动寻找预测文件
         output_dir = Path("./walk_forward_output")
         pred_files = list(output_dir.glob("wf_predictions_*.csv"))
         if not pred_files:
@@ -60,23 +59,32 @@ class WalkForwardCLI:
         
         results = analyzer.analyze_test_performance(str(latest_pred), self.config.stock_pool)
         
-        # 打印测试集 IC
+        # A. 打印 IC
         ic_df = pd.DataFrame([results["ic_stats"]])
-        print("\n[ 测试集真实 IC/ICIR (Out-of-Sample) ]")
+        print("\n[ 样本外预测力 (Out-of-Sample) ]")
         print(tabulate(ic_df, headers='keys', tablefmt='psql', floatfmt=".4f"))
         
-        # 打印回测统计
-        bt_df = pd.DataFrame([results["backtest_stats"]])
-        print("\n[ 模拟回测表现 (Top 30 等权) ]")
-        print(tabulate(bt_df, headers='keys', tablefmt='psql', floatfmt=".4f"))
+        # B. 打印理论回测 (Theoretical)
+        theo_df = pd.DataFrame([results["theoretical_performance"]])
+        print("\n[ 理论回测表现 (Top 30 等权 / 无成本 / 无限制) ]")
+        print(tabulate(theo_df, headers='keys', tablefmt='psql', floatfmt=".4f"))
+
+        # C. 打印实盘回测 (Realistic)
+        real_perf = results.get("realistic_performance", {})
+        if real_perf:
+            real_df = pd.DataFrame([real_perf])
+            print("\n[ Qlib 官方实盘模拟 (含手续费 / 涨跌停限制) ]")
+            print(tabulate(real_df, headers='keys', tablefmt='psql', floatfmt=".4f"))
+        
         print("\n" + "="*100 + "\n")
 
     def run(self):
         """核心运行入口"""
-        # 状态自检
+        import pandas as pd
+        from .core.predict import WFPredictor
+
         self.state_manager.verify_consistency()
         
-        # 计算所有重训触发点 T_i
         start_date = self.config.start_date
         end_date = self.config.end_date or self.calendar.trade_dates[-1]
         
@@ -87,15 +95,15 @@ class WalkForwardCLI:
         logger.info(f"生成重训计划点: {len(triggers)} 个")
 
         all_predictions = []
+        predictor = WFPredictor(self.qlib_config)
 
         # --- 步进处理 ---
         for i, ti in enumerate(triggers):
             logger.info(f"--- 步进处理第 {i+1}/{len(triggers)} 个区间 [T_i: {ti}] ---")
             
-            # 找到下个重训点作为区间边界
             next_ti = triggers[i+1] if i + 1 < len(triggers) else end_date
             
-            # A-1: 训练环节
+            # --- 阶段 A: 训练 ---
             event = next((e for e in self.state_manager.history if e["retrain_date"] == ti), None)
             
             if not event:
@@ -112,26 +120,20 @@ class WalkForwardCLI:
                     )
                     
                     exp_name = f"WF_{task_cfg.name}"
-                    
-                    # 派发训练
                     success = run_train_process(task, exp_name, self.qlib_config)
                     
                     if success:
-                        # 训练成功后，在主进程通过 Qlib 获取刚才生成的 rid
                         import qlib
                         import time
                         from qlib.workflow import R
                         qlib.init(**self.qlib_config)
                         exp = R.get_exp(experiment_name=exp_name)
                         
-                        # 增加重试机制 (最多 3 次)，应对 MLflow 文件系统延迟
                         latest_rid = None
                         for _ in range(3):
                             rids = exp.list_recorders()
                             if rids:
-                                # 直接通过 exp 对象获取 Recorder
                                 recorders = [exp.get_recorder(recorder_id=rid) for rid in rids]
-                                # 按开始时间降序排序，取最新的
                                 sorted_recs = sorted(recorders, key=lambda r: r.info['start_time'], reverse=True)
                                 latest_rid = sorted_recs[0].id
                                 break
@@ -141,7 +143,7 @@ class WalkForwardCLI:
                             ti_rids[task_cfg.name] = latest_rid
                             logger.info(f"成功记录 RID: {latest_rid}")
                         else:
-                            logger.error(f"无法从实验 {exp_name} 中获取新生成的 RID")
+                            logger.error(f"无法获取新生成的 RID")
                     else:
                         logger.error(f"任务 {task_cfg.name} 训练失败！")
                 
@@ -149,16 +151,48 @@ class WalkForwardCLI:
                     self.state_manager.save_retrain_event(ti, ti_rids)
                     event = {"retrain_date": ti, "tasks": ti_rids}
             else:
-                logger.info(f"点 {ti} 已有有效训练记录。")
+                logger.info(f"点 {ti} 已有有效记录。")
 
-            # --- 阶段 B: 推理 (为了验证稳定性，我们先保持推理部分在主进程执行的注释，随后再将其隔离) ---
-            """
+            # --- 阶段 B: 推理 (隔离执行) ---
             if event:
                 logger.info(f"执行区间 [{ti} ~ {next_ti}) 的推理预测...")
-                # 推理逻辑整合将在下一步进行
-            """
+                period_preds = []
+                for task_cfg in self.config.tasks:
+                    rid = event["tasks"].get(task_cfg.name)
+                    if not rid: continue
+                    
+                    segments = self.calendar.generate_split_segments(
+                        ti, task_cfg.lookback_unit, task_cfg.lookback_length, 
+                        task_cfg.split.method, task_cfg.split.train, task_cfg.split.valid
+                    )
+                    task = WFTaskBuilder.build_task(
+                        task_cfg.model_name, task_cfg.dataset_name, 
+                        self.config.stock_pool, segments, end_time=next_ti
+                    )
+                    
+                    exp_name = f"WF_{task_cfg.name}"
+                    score = predictor.predict_segment(task, exp_name, rid, ti, next_ti)
+                    
+                    if not score.empty:
+                        df_s = score.to_frame(name='score')
+                        df_s['task'] = task_cfg.name
+                        period_preds.append(df_s)
+                
+                if period_preds:
+                    df_period = pd.concat(period_preds)
+                    df_avg = df_period.groupby(['datetime', 'instrument'])['score'].mean().to_frame()
+                    all_predictions.append(df_avg)
 
-        logger.info("✨ Walk-Forward 流程执行结束。")
+        # 4. 汇总结果
+        if all_predictions:
+            final_df = pd.concat(all_predictions).sort_index()
+            output_dir = Path("./walk_forward_output")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = output_dir / f"wf_predictions_{start_date}_{end_date}.csv"
+            final_df.to_csv(output_file)
+            logger.info(f"✨ Walk-Forward 推理完成！结果保存至: {output_file}")
+        else:
+            logger.warning("未生成任何预测结果。")
 
 if __name__ == "__main__":
     fire.Fire(WalkForwardCLI)
