@@ -39,40 +39,56 @@ class WFAnalyzer:
         if not Path(prediction_file).exists():
             return {"error": f"预测文件不存在: {prediction_file}"}
 
-        df_pred = pd.read_csv(prediction_file, parse_dates=['datetime']).set_index(['datetime', 'instrument'])
+        # 1. 加载预测数据并标准化
+        df_pred = pd.read_csv(prediction_file, parse_dates=['datetime'])
+        df_pred['instrument'] = df_pred['instrument'].astype(str).str.upper() # 统一大写用于 IC 计算
+        df_pred = df_pred.set_index(['datetime', 'instrument'])
+        
         start_date = df_pred.index.get_level_values('datetime').min()
         end_date = df_pred.index.get_level_values('datetime').max()
 
-        # 1. 计算 IC (标准未来收益)
-        logger.info(f"正在获取真实行情用于 IC 计算...")
+        # 2. 获取真实行情并标准化
+        logger.info(f"正在获取真实行情用于 IC 计算 (区间: {start_date} ~ {end_date})...")
         df_label = D.features(D.instruments(stock_pool), ['Ref($close, -2) / Ref($close, -1) - 1'], 
                              start_time=start_date, end_time=end_date, freq='day')
         df_label.columns = ['label']
+        # 强制将行情数据的代码也转为大写，确保能与预测数据对齐
+        df_label = df_label.reset_index()
+        df_label['instrument'] = df_label['instrument'].astype(str).str.upper()
+        df_label = df_label.set_index(['datetime', 'instrument'])
+
+        # 3. 合并数据并计算指标
         df_combined = df_pred.merge(df_label, left_index=True, right_index=True, how='inner').dropna()
+        logger.info(f"数据合并完成，有效样本数: {len(df_combined)}")
+        
+        if len(df_combined) == 0:
+            logger.error("IC 计算失败：预测数据与行情数据没有重叠（请检查股票代码格式和日期范围）")
+            return {"error": "No overlapping data between predictions and labels."}
+
         daily_ic = df_combined.groupby('datetime').apply(lambda g: g['score'].corr(g['label']), include_groups=False)
         daily_ric = df_combined.groupby('datetime').apply(lambda g: g['score'].corr(g['label'], method='spearman'), include_groups=False)
 
-        # 2. 理论模拟回测 (Theoretical: 无成本、无涨跌停限制)
-        logger.info("执行理论等权回测模拟...")
+        # 4. 理论模拟回测 (Theoretical: 无成本、无限制)
         def calc_theoretical_ret(group):
             return group.nlargest(30, 'score')['label'].mean()
         theo_daily_ret = df_combined.groupby('datetime').apply(calc_theoretical_ret, include_groups=False).dropna()
         theo_cum_ret = (1 + theo_daily_ret).cumprod()
 
-        # 3. Qlib 官方实盘模拟回测 (Realistic: 含成本、含涨跌停限制)
+        # 5. Qlib 官方实盘模拟回测 (Realistic)
         logger.info("启动 Qlib 官方回测模块 (A股实盘规则)...")
+        # 信号需要与 D.features 保持一致使用大写
         strategy = TopkDropoutStrategy(topk=30, n_drop=5, signal=df_pred)
         
-        # A股标准回测配置
         exchange_kwargs = {
             "freq": "day",
-            "limit_threshold": 0.1,    # 10% 涨跌停限制
-            "deal_price": "close",     # 收盘价成交
-            "open_cost": 0.0005,       # 买入万五
-            "close_cost": 0.0015,      # 卖出万十五 (含印花税)
-            "min_cost": 5,             # 最低5元
+            "limit_threshold": 0.1,
+            "deal_price": "close",
+            "open_cost": 0.0005,
+            "close_cost": 0.0015,
+            "min_cost": 5,
         }
-        executor = SimulatorExecutor(time_per_step="day", exchange_kwargs=exchange_kwargs, generate_report=True)
+        # 关键修复：必须开启 generate_portfolio_metrics=True 才能返回真实的持仓和资金流水
+        executor = SimulatorExecutor(time_per_step="day", exchange_kwargs=exchange_kwargs, generate_portfolio_metrics=True)
         
         res = qlib_backtest(
             strategy=strategy, 
@@ -83,47 +99,44 @@ class WFAnalyzer:
             benchmark="SH000300",
         )
         
-        # 结果解包与清洗
+        # 解析回测报告：res 是 (portfolio_dict, indicator_dict)
         real_report = pd.DataFrame()
-        def find_df(obj):
-            if isinstance(obj, pd.DataFrame): return obj
-            if isinstance(obj, dict):
-                for v in obj.values():
-                    r = find_df(v)
-                    if r is not None and not r.empty: return r
-            if isinstance(obj, (list, tuple)):
-                for item in obj:
-                    r = find_df(item)
-                    if r is not None and not r.empty: return r
-            return None
-        real_report = find_df(res)
-
-        # 4. 指标汇总
+        if isinstance(res, tuple) and len(res) > 0:
+            portfolio_dict = res[0]
+            if isinstance(portfolio_dict, dict) and '1day' in portfolio_dict:
+                # portfolio_dict['1day'] 是一个元组，第一个元素是 account dataframe
+                real_report = portfolio_dict['1day'][0]
+        
+        # 指标汇总
+        ric_values = daily_ric.values
+        ric_mean_val = float(np.nanmean(ric_values)) if len(ric_values) > 0 else 0
+        ric_std_val = float(np.nanstd(ric_values)) if len(ric_values) > 0 else 0
+        
         results = {
             "ic_stats": {
-                "Test_RankIC": daily_ric.mean(),
-                "Test_RankICIR": daily_ric.mean() / daily_ric.std() if daily_ric.std() != 0 else 0,
+                "Test_RankIC": ric_mean_val,
+                "Test_RankICIR": (ric_mean_val / ric_std_val) if ric_std_val > 0 else 0,
             },
             "theoretical_performance": {
-                "Total_Return %": (theo_cum_ret.iloc[-1] - 1) * 100 if not theo_cum_ret.empty else 0,
-                "Max_Drawdown %": (theo_cum_ret / theo_cum_ret.cummax() - 1).min() * 100 if not theo_cum_ret.empty else 0,
+                "Total_Return %": float((theo_cum_ret.iloc[-1] - 1) * 100) if not theo_cum_ret.empty else 0,
+                "Max_Drawdown %": float((theo_cum_ret / theo_cum_ret.cummax() - 1).min() * 100) if not theo_cum_ret.empty else 0,
             },
             "realistic_performance": {}
         }
 
-        if real_report is not None and not real_report.empty:
-            # 兼容不同列名抓取收益
-            ret_col = next((c for c in ['return', 'pa', 'portfolio_return'] if c in real_report.columns), real_report.columns[0])
-            if ret_col == 'pa': # 如果是净值，转为收益率
-                s_ret = real_report['pa'].pct_change().fillna(0)
+        if isinstance(real_report, pd.DataFrame) and not real_report.empty:
+            # account 列代表每日扣除手续费和考虑涨跌停后的真实账户净资产
+            if 'account' in real_report.columns:
+                real_equity = real_report['account'] / 100000000.0  # 归一化为净值
+                s_ret = real_equity.pct_change().fillna(0)
             else:
-                s_ret = real_report[ret_col]
+                s_ret = real_report.iloc[:, 0].pct_change().fillna(0)
+                real_equity = (1 + s_ret).cumprod()
             
-            real_cum_ret = (1 + s_ret).cumprod()
             results["realistic_performance"] = {
-                "Total_Return %": (real_cum_ret.iloc[-1] - 1) * 100,
-                "Max_Drawdown %": (real_cum_ret / real_cum_ret.cummax() - 1).min() * 100,
-                "Sharpe_Ratio": (s_ret.mean() / s_ret.std() * np.sqrt(250)) if s_ret.std() != 0 else 0
+                "Total_Return %": float((real_equity.iloc[-1] - 1) * 100),
+                "Max_Drawdown %": float((real_equity / real_equity.cummax() - 1).min() * 100),
+                "Sharpe_Ratio": float(s_ret.mean() / s_ret.std() * np.sqrt(250)) if s_ret.std() != 0 else 0
             }
         else:
             results["realistic_performance"] = {"Note": "Qlib Backtest Empty (Check Data/Thresholds)"}
