@@ -71,7 +71,19 @@ class WFAnalyzer:
         # 4. 理论模拟回测 (Theoretical: 无成本、无限制)
         def calc_theoretical_ret(group):
             return group.nlargest(30, 'score')['label'].mean()
-        theo_daily_ret = df_combined.groupby('datetime').apply(calc_theoretical_ret, include_groups=False).dropna()
+        theo_daily_ret_raw = df_combined.groupby('datetime').apply(calc_theoretical_ret, include_groups=False).dropna()
+        
+        # --- 时间轴对齐修正 (Alignment Fix) ---
+        # 信号在 T 日产生，收益在 T+1 建立仓位并在 T+2 结束时实现。
+        # 理论收益 theo_daily_ret_raw[T] 对应的是 T+1 到 T+2 的涨幅。
+        # 为了与 Qlib 的 account 报告（结算日索引）对齐，我们需要将理论收益的日期向后平移 2 个交易日。
+        trade_calendar = D.calendar(start_time=start_date, end_time=D.calendar()[-1])
+        date_map = {trade_calendar[i]: trade_calendar[i+2] for i in range(len(trade_calendar)-2)}
+        
+        theo_daily_ret = theo_daily_ret_raw.copy()
+        theo_daily_ret.index = theo_daily_ret.index.map(date_map)
+        theo_daily_ret = theo_daily_ret.dropna()
+        
         theo_cum_ret = (1 + theo_daily_ret).cumprod()
 
         # 5. Qlib 官方实盘模拟回测 (Realistic)
@@ -139,6 +151,14 @@ class WFAnalyzer:
                 "Sharpe_Ratio": float(s_ret.mean() / s_ret.std() * np.sqrt(250)) if s_ret.std() != 0 else 0
             }
         else:
+            real_equity = pd.Series(dtype=float)
             results["realistic_performance"] = {"Note": "Qlib Backtest Empty (Check Data/Thresholds)"}
+
+        # 附加上时间序列数据供画图使用
+        results["series"] = {
+            "daily_ric": daily_ric,
+            "theo_equity": theo_cum_ret,
+            "real_equity": real_equity
+        }
 
         return results

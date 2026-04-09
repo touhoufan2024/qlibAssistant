@@ -78,6 +78,71 @@ class WalkForwardCLI:
         
         print("\n" + "="*100 + "\n")
 
+        # 3. 绘制分析图表
+        series_data = results.get("series", {})
+        if series_data:
+            self._plot_analysis(latest_pred.name, series_data)
+
+    def _plot_analysis(self, pred_filename: str, series_data: Dict[str, Any]):
+        import matplotlib.pyplot as plt
+        
+        # 兼容 Windows 中文显示
+        plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial']
+        plt.rcParams['axes.unicode_minus'] = False
+        
+        daily_ric = series_data.get("daily_ric")
+        theo_equity = series_data.get("theo_equity")
+        real_equity = series_data.get("real_equity")
+        
+        if daily_ric is None or daily_ric.empty:
+            logger.warning("没有足够的数据来绘制图表。")
+            return
+            
+        fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+        
+        # Subplot 1: Daily RankIC & Cumulative RankIC
+        ax1 = axes[0]
+        ax1.bar(daily_ric.index, daily_ric.values, color='skyblue', alpha=0.7, label='每日 RankIC')
+        ax1.set_ylabel('RankIC', color='tab:blue')
+        ax1.tick_params(axis='y', labelcolor='tab:blue')
+        
+        ax2 = ax1.twinx()
+        cum_ric = daily_ric.cumsum()
+        ax2.plot(cum_ric.index, cum_ric.values, color='darkorange', linewidth=2, label='累计 RankIC')
+        ax2.set_ylabel('累计 RankIC', color='darkorange')
+        ax2.tick_params(axis='y', labelcolor='darkorange')
+        
+        ax1.set_title("样本外 RankIC 表现", fontsize=14)
+        ax1.grid(True, linestyle='--', alpha=0.4)
+        
+        # 合并图例
+        lines_1, labels_1 = ax1.get_legend_handles_labels()
+        lines_2, labels_2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper left')
+        
+        # Subplot 2: Cumulative Returns (Equity)
+        ax3 = axes[1]
+        if theo_equity is not None and not theo_equity.empty:
+            ax3.plot(theo_equity.index, theo_equity.values, label='理论净值 (Top 30 等权 无摩擦)', linestyle='--', color='tab:green', linewidth=2)
+        if real_equity is not None and not real_equity.empty:
+            ax3.plot(real_equity.index, real_equity.values, label='Qlib 实盘模拟净值 (含万20双边摩擦及涨跌停限制)', color='tab:red', linewidth=2)
+            
+        ax3.set_title("策略净值曲线对比 (初始净值=1.0)", fontsize=14)
+        ax3.set_ylabel('净值 (Equity)')
+        ax3.legend(loc='upper left')
+        ax3.grid(True, linestyle='--', alpha=0.6)
+        
+        plt.tight_layout()
+        
+        output_dir = Path("./walk_forward_output")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        plot_name = pred_filename.replace('.csv', '.png').replace('wf_predictions', 'wf_analysis')
+        plot_path = output_dir / plot_name
+        
+        plt.savefig(plot_path, dpi=150)
+        plt.close()
+        logger.info(f"✨ 每日 IC 及回测净值图表已生成并保存至: {plot_path}")
+
     def run(self):
         """核心运行入口"""
         import pandas as pd

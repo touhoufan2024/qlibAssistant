@@ -1,8 +1,8 @@
 # 前向步进 (Walk-Forward) 回测与实盘配置
 
 # 模拟开始/结束日期
-start_date: "2026-01-01"
-end_date: "2026-03-27"
+start_date: "2025-01-01"
+end_date: ""
 
 # 基础路径 (借用 roll 目录的常用配置值)
 provider_uri: "~/.qlib/qlib_data/cn_data/"

@@ -50,7 +50,8 @@ class DataCLI:
             "A": proxy_a,
             "B": proxy_b,
             "C": proxy_c,
-            "D": proxy_d
+            "D": proxy_d,
+            "E": ""
         }
         use_proxy = proxy_map.get(proxy.upper(), proxy)
         
