@@ -26,17 +26,19 @@ tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 from qlib.workflow.task.gen import handler_mod as default_handler_mod
 
 
-def _train_worker(task, exp_name, qlib_config=None):
+def _train_worker(task, exp_name, region=REG_CN, **kwargs):
     """
     这是子进程实际执行的函数。
     """
     try:
-        # 如果你有特殊的配置，建议通过 qlib_config 传进来
-        # 如果只是默认配置，可以直接 qlib.init()
-        if qlib_config:
-            qlib.init(**qlib_config)
-        else:
-            qlib.init()
+        # 每个子进程重新初始化
+        uri_folder = kwargs["uri_folder"]
+        provider_uri = kwargs["provider_uri"]
+        exp_manager = C["exp_manager"]
+        exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
+        logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
+        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
+
         # 打印 PID 方便观察
         logger.info(f"🔵 [子进程 PID: {os.getpid()}] 开始训练...", flush=True)
 
@@ -51,14 +53,20 @@ def _train_worker(task, exp_name, qlib_config=None):
         logger.info(f"🔴 [子进程 PID: {os.getpid()}] 训练出错: {e}", flush=True)
         raise e
 
-def run_train_blocking(task, exp_name, qlib_config=None):
+def run_train_blocking(task, exp_name, region, **kwargs):
     """
     主进程调用的函数。
     功能：启动子进程 -> 阻塞等待 -> 返回结果
     """
+    # "spawn" 在 mac / linux 都能用
+    # "fork" 在 mac 上不安全（尤其涉及 qlib / numpy / torch）
+    multiprocessing.set_start_method("spawn", force=True)
     # 1. 创建子进程，目标是上面的 _train_worker 函数
-    p = multiprocessing.Process(target=_train_worker, args=(task, exp_name, qlib_config))
-
+    p = multiprocessing.Process(
+        target=_train_worker,
+        args=(task, exp_name, region),
+        kwargs=kwargs   # ✅ 正确传递
+    )
     # 2. 启动子进程
     p.start()
 
@@ -102,6 +110,7 @@ class TrainCLI:
     ):
         uri_folder = kwargs["uri_folder"]
         provider_uri = kwargs["provider_uri"]
+        self.region = region
         self.step = step
         self.kwargs = kwargs
         exp_manager = C["exp_manager"]
@@ -186,7 +195,7 @@ class TrainCLI:
                 logger.info(f"Skipping training for segment {train_time_seg} as it already exists in the experiment.")
                 continue
 
-            run_train_blocking(task, exp_name, self.qlib_config)
+            run_train_blocking(task, exp_name, self.region, **self.kwargs)
             gc.collect()
 
     def start_custom(self):
