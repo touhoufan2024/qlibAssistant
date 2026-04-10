@@ -3,7 +3,6 @@ review_csv/
 .vscode/
 **/__pycache__/
 roll/home
-GEMINI.md
 
 # --- VitePress (page) ---
 page/node_modules/
