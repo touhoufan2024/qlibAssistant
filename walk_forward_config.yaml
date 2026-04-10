@@ -1,0 +1,27 @@
+# 前向步进 (Walk-Forward) 回测与实盘配置
+
+# 模拟开始/结束日期
+start_date: "2025-01-01"
+end_date: ""
+
+# 基础路径 (借用 roll 目录的常用配置值)
+provider_uri: "~/.qlib/qlib_data/cn_data/"
+mlruns_uri: "~/.qlibAssistant/mlruns/"
+stock_pool: "csi300"
+
+# 重训触发规则
+trigger_unit: "trading_days"
+trigger_interval: 20      # 缩短间隔至 20 天以观察触发
+
+# 多尺度任务定义
+tasks:
+  - name: "lgbm_test"
+    model_name: "LightGBM"
+    dataset_name: "Alpha158"
+    lookback_unit: "months"
+    lookback_length: 12
+    split:
+      method: "ratio"
+      unit: "months"
+      train: 0.8
+      valid: 0.2
