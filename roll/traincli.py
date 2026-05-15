@@ -116,7 +116,8 @@ class TrainCLI:
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(uri_folder).expanduser())
         logger.info(f"Experiment uri: {exp_manager['kwargs']['uri']}")
-        qlib.init(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
+        self.qlib_config = dict(provider_uri=provider_uri, region=region, exp_manager=exp_manager)
+        qlib.init(**self.qlib_config)
         model_name = kwargs["model_name"]
         dataset_name = kwargs["dataset_name"]
         stock_pool = kwargs["stock_pool"]

@@ -1,11 +1,14 @@
 import re
 from pathlib import Path
-from typing import Dict
+from typing import Dict, TYPE_CHECKING
 
 import pandas as pd
 from loguru import logger
 from pprint import pprint
 from utils import append_to_file, TradeDate
+
+if TYPE_CHECKING:
+    from modelcli import ModelCLI
 
 top_num_list = [10, 20, 30, 50, 80, 100]
 
