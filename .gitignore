@@ -11,5 +11,11 @@ page/docs/.vitepress/cache/
 # 以下由 gen_page 生成，部署时自动构建
 page/docs/index.md
 page/docs/score/
+
+
+walk_forward_output/
+wf_state.json
+
 /.idea
 .DS_Store
+
